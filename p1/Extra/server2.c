@@ -74,16 +74,49 @@ void readWriteServer(int connfd, int listenfd){
   while( (read_size = recv(connfd , buff , 1024 , 0)) > 0 )
     {
         //Send the message back to client
-        printf("The server has: \n");
-        printf(buff);
-        in  = popen(buff,"r");
+        //char 
+
+        if (!(in = popen(buff, "r"))) {
+          perror("Not able to read stream");
+          exit(1);
+        } 
+
+        //int length = (int)strlen(buff);
+        //printf("gets before while loop %d\n",length);
+
+        if(fgets(buff,sizeof(buff), in) == NULL){
+            printf("success in finding problem");
+            sprintf(buff,"empty");
+            write(connfd, buff, strlen(buff));
+            bzero(buff,1024);
+        }else{
+            printf("Gets into if statement\n");
+            printf("%s", buff);
+            write(connfd , buff , strlen(buff));
+            bzero(buff,1024);
+        }
+
 
         while (fgets(buff, sizeof(buff), in) != NULL) {
+            printf("Gets into fgets\n");
             printf("%s", buff);
+            write(connfd , buff , strlen(buff));
+            bzero(buff,1024);
         }
+        if(fgets(buff,sizeof(buff), in) == NULL){
+            printf("success in finding problem TWO");
+            sprintf(buff,"empty");
+            write(connfd, buff, strlen(buff));
+            bzero(buff,1024);
+        }
+        //int length = (int)strlen(buff);
+        //printf("gets outside while loop %d\n",length);
         pclose(in);
 
-        write(connfd , buff , strlen(buff));
+        printf("\n------------------------\n");
+        //printf(buff);
+
+        //write(connfd , buff , strlen(buff));
         bzero(buff,1024);
     }
      

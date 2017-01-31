@@ -10,12 +10,12 @@
 #include <arpa/inet.h>
 #include <string.h>
 
-#define MAXLINE 4096
+#define MAXLINE2 4096
 #define LISTENQ 1024
 
 int     listenfd, connfd,read_size;
 struct sockaddr_in servaddr;
-char    buff[1025];
+char    buff[MAXLINE2];
 time_t ticks;
 int port;
 FILE *in;
@@ -114,7 +114,7 @@ int acceptServer(int listenfd){
  * who prints the output onto the screen.
  */
 void readWriteServer(int connfd, int listenfd){
-  while( (read_size = recv(connfd , buff , 1024 , 0)) > 0 )
+  while( (read_size = recv(connfd , buff , MAXLINE2 , 0)) > 0 )
     {
         //makes it possible to put the buffer
         //into a file. popen executes the command
@@ -135,19 +135,19 @@ void readWriteServer(int connfd, int listenfd){
               printf("CAME INTO HERE\n");
               sprintf(buff,"exit");
               write(connfd,buff,strlen(buff));
-              bzero(buff,1024);
+              bzero(buff,MAXLINE2);
               x = 1;
             }else{
               sprintf(buff,"empty");
               write(connfd, buff, strlen(buff));
-              bzero(buff,1024);
+              bzero(buff,MAXLINE2);
               x = 1;
             }           
         }else{
             printf("Gets into if statement\n");
             printf("%s", buff);
             write(connfd , buff , strlen(buff));
-            bzero(buff,1024);
+            bzero(buff,MAXLINE2);
         }
         
         //this while loop continually reads from the "in"
@@ -157,7 +157,7 @@ void readWriteServer(int connfd, int listenfd){
             //printf("Gets into fgets\n");
             printf("%s", buff);
             write(connfd , buff , strlen(buff));
-            bzero(buff,1024);
+            bzero(buff,MAXLINE2);
         }
   
         //this if statement sends a final message to the client
@@ -165,13 +165,13 @@ void readWriteServer(int connfd, int listenfd){
         //client to type a new command
         if((fgets(buff,sizeof(buff), in) == NULL) && (x==0)){
             printf("success in finding problem TWO\n");
-            bzero(buff,1024);
+            bzero(buff,MAXLINE2);
             sprintf(buff,"empty");
             write(connfd, buff, strlen(buff));
-            bzero(buff,1024);
+            bzero(buff,MAXLINE2);
         }
         pclose(in);
-        bzero(buff,1024); //zeroes/resets the buffer
+        bzero(buff,MAXLINE2); //zeroes/resets the buffer
     }
  
     //this is for when the client is done sending

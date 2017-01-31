@@ -107,42 +107,44 @@ void readWriteSocket(int sockfd){
         while( (recfd = recv(sockfd , recvline , MAXLINE , 0)) > 0)
         {
             //printf("Got here1\n");
-	    int newLength = (int)(sizeof(recvline));
-	    printf("the length is: %d\n",newLength);
-            printf(recvline);
+	    //int newLength = (int)(sizeof(recvline));
+	    //printf("the length is: %d\n",newLength);
+            //printf(recvline);
+	    //fputs(recvline,stdout);
             //printf("Got here2\n");
 
-	    printf("1111111111111111111111111111111111\n");
 
 	    int myLength = strlen(recvline);
 	    const char *last_five = &recvline[myLength-5];
 	    const char *last_four = &recvline[myLength-4];	    
 
-	    printf("222222222222222222222222222222222\n");
 
             //if client enters exit, this allows the
             //client to close its socket and exit
             if (strncmp(last_four,"exit",4) == 0){
-              printf("got into socket close \n");
+              //printf("got into socket close \n");
               close(sockfd);
               exit(0);
             }
 
-	    printf("333333333333333333333333333333333\n");
 
             //this message is for when the server is done
             //sending its messages. It allows the client to 
             //enter its next command.
             if(strncmp(last_five,"empty",5) == 0){
+	      int buffLength = strlen(recvline) - 5;
+	      printf("%.*s",buffLength,recvline + 0);
+	      //printf("\n------------BEFORE BREAK-------------\n");
               break;
             }
 
-	    printf("444444444444444444444444444444444\n");
 
             //printf(recvline);
+	    //printf("Got here 1 \n");
+	    fputs(recvline,stdout);
+	    //printf("Got here 2 \n");
             bzero(recvline,MAXLINE); //zero out buffer
 
-	    printf("555555555555555555555555555555555\n");
 
         }
        
@@ -173,6 +175,3 @@ main(int argc, char **argv)
     readWriteSocket(sockfd);
     return 0;
 }
-
-
-

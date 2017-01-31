@@ -9,7 +9,7 @@
 #include <arpa/inet.h>
 #include <string.h>
 
-#define MAXLINE 1024
+#define MAXLINE 4096 
 
 int     sockfd, n;
 char    recvline[MAXLINE + 1], sendline[1024];
@@ -92,7 +92,7 @@ void readWriteSocket(int sockfd){
   //or when the client sends an "exit" message
   while(1){
         bzero(sendline,1024); //zeroing out the buffer
-        printf(" > ");
+        printf("> ");
         fgets(sendline, 1024, stdin); //gets user input
         
         //sends the message to the server 
@@ -106,26 +106,34 @@ void readWriteSocket(int sockfd){
         //sending its messages to the client            
         while( (recfd = recv(sockfd , recvline , MAXLINE , 0)) > 0)
         {
-            //printf("Got here1\n");
-            //printf(recvline);
-            //printf("Got here2\n");
+
+	    int myLength = strlen(recvline);
+	    const char *last_five = &recvline[myLength-5];
+	    const char *last_four = &recvline[myLength-4];	    
+
 
             //if client enters exit, this allows the
             //client to close its socket and exit
-            if (strncmp(recvline,"exit",4) == 0){
-              printf("got into socket close \n");
+            if (strncmp(last_four,"exit",4) == 0){
               close(sockfd);
               exit(0);
             }
 
+
             //this message is for when the server is done
             //sending its messages. It allows the client to 
             //enter its next command.
-            if(strncmp(recvline,"empty",5) == 0){
+            if(strncmp(last_five,"empty",5) == 0){
+	      int buffLength = strlen(recvline) - 5;
+	      printf("%.*s",buffLength,recvline + 0);
               break;
             }
-            printf(recvline);
+
+
+	    fputs(recvline,stdout);
             bzero(recvline,MAXLINE); //zero out buffer
+
+
         }
        
         //if there was a recieving error, it will accounted over here 
@@ -155,6 +163,3 @@ main(int argc, char **argv)
     readWriteSocket(sockfd);
     return 0;
 }
-
-
-
