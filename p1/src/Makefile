@@ -9,7 +9,7 @@ server: server.c
 	mv server ../bin
 
 clean: 
-	rm ../bin/client ../bin/server ../bin/*.o
+	rm -f ../bin/client ../bin/server ../bin/*.o
 
 test: test_ex1.py
 	python3 test_ex1.py

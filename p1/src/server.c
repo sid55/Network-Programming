@@ -130,7 +130,6 @@ void readWriteServer(int connfd, int listenfd){
         //"empty" back to the client 
         if(fgets(buff,sizeof(buff), in) == NULL){
             if(strncmp(buff,"exit",4) == 0){
-              printf("CAME INTO HERE\n");
               sprintf(buff,"exit");
               write(connfd,buff,strlen(buff));
               bzero(buff,MAXLINE2);
@@ -173,7 +172,6 @@ void readWriteServer(int connfd, int listenfd){
     //its messages to the server. The client disconnects.     
     if(read_size == 0)
     {
-        perror("Client disconnected\n");
         close(connfd);
     }
     else if(read_size == -1)
