@@ -9,16 +9,16 @@
 #include <arpa/inet.h>
 #include <string.h>
 
-#define MAXLINE2 4096
-#define LISTENQ 1024
+#define MAXLINE2 4096 //size of bytes for the buffer
+#define LISTENQ 1024 //size of the listening queue of clients
 
-int     listenfd, connfd,read_size;
-struct sockaddr_in servaddr;
-char    buff[MAXLINE2];
-time_t ticks;
-int port;
-FILE *in;
-extern FILE *popen();
+int     listenfd, connfd,read_size; //the listen and accept file desciptors
+struct sockaddr_in servaddr; //the server address
+char    buff[MAXLINE2]; //the buffer which reads and sends lines
+time_t ticks; //ticks variable 
+int port; //server port number
+FILE *in; //will be used with popen
+extern FILE *popen(); //will be used with popen
 
 /*
  * This method checks the number of arguments when running
@@ -123,6 +123,9 @@ void readWriteServer(int connfd, int listenfd){
           exit(1);
         } 
 
+	//this int value will be used to ensure that
+	//that fgets doesnt get called twice when only is
+	//supposed to get called once
         int x = 0;
 
         //if user enters nothing or for other cases like
@@ -172,9 +175,9 @@ void readWriteServer(int connfd, int listenfd){
     //its messages to the server. The client disconnects.     
     if(read_size == 0)
     {
-        close(connfd);
+        close(connfd); //closes the file descriptor returned by accept
     }
-    else if(read_size == -1)
+    else if(read_size < 0)
     {
         perror("recv failed on server\n");
     }
@@ -191,7 +194,7 @@ void readWriteServer(int connfd, int listenfd){
 void acceptReadWriteServer(int listenfd){
   while(1){
     int connfd = acceptServer(listenfd);
-    readWriteServer(connfd, listenfd);
+    readWriteServer(connfd, listenfd); //contains code for receiving and sending data
   }
 }
 
@@ -203,7 +206,7 @@ int
 main(int argc, char **argv)
 {
   numArgs(argc);
-  int listenfd = createListenSocket();
+  int listenfd = createListenSocket(); //the file desriptor for the socket on server
   createServer(argv[1]);
   bindServer(listenfd);
   listenServer(listenfd);

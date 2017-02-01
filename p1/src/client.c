@@ -9,12 +9,12 @@
 #include <arpa/inet.h>
 #include <string.h>
 
-#define MAXLINE 4096 
+#define MAXLINE 4096 //size of buffer
 
-int     sockfd, n;
-char    recvline[MAXLINE + 1], sendline[1024];
-struct sockaddr_in servaddr;
-int port;
+int     sockfd, n; //the socket file descriptor
+char    recvline[MAXLINE + 1], sendline[1024]; //the recieve and send buffers
+struct sockaddr_in servaddr; //the server address
+int port; //the server port number
 
 /*
  * This method checks to make sure that the number of 
@@ -107,6 +107,8 @@ void readWriteSocket(int sockfd){
         while( (recfd = recv(sockfd , recvline , MAXLINE , 0)) > 0)
         {
 
+	    //variables created for allowing search of
+	    //the words "empty" and "exit" in recieved data
 	    int myLength = strlen(recvline);
 	    const char *last_five = &recvline[myLength-5];
 	    const char *last_four = &recvline[myLength-4];	    
@@ -124,13 +126,16 @@ void readWriteSocket(int sockfd){
             //sending its messages. It allows the client to 
             //enter its next command.
             if(strncmp(last_five,"empty",5) == 0){
+
+	      //allows client to print data up until "empty" 
+	      //is also sent back by server
 	      int buffLength = strlen(recvline) - 5;
 	      printf("%.*s",buffLength,recvline + 0);
               break;
             }
 
 
-	    fputs(recvline,stdout);
+	    fputs(recvline,stdout); //prints data received onto screen
             bzero(recvline,MAXLINE); //zero out buffer
 
 
@@ -142,7 +147,7 @@ void readWriteSocket(int sockfd){
            exit(1); 
         }
         if (recfd == 0){
-          printf("recfd is equal to zero");
+           perror("recfd is equal to zero");
         }
 
         bzero(recvline,MAXLINE); //the recieving buffer is reset/zeroed
