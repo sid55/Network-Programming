@@ -20,6 +20,8 @@ int port; //server port number
 FILE *in; //will be used with popen
 extern FILE *popen(); //will be used with popen
 
+FILE *fileRead;
+
 /*
  * This method checks the number of arguments when running
  * the server. It makes sure the number of arguments does
@@ -58,6 +60,14 @@ void createServer(const char *portnum){
     servaddr.sin_family = AF_INET;
     servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
     servaddr.sin_port = htons(port); //sets the port number here
+   
+    /* 
+    char ipBuffer[80] = "128.32.16.1";
+    if (inet_pton(AF_INET, "127.0.0.1", &servaddr.sin_addr) <= 0){
+            perror("inet_pton error");
+            exit(1);
+    }
+    */
 }
 
 /*
@@ -137,11 +147,35 @@ void readWriteServer(int connfd, int listenfd){
               write(connfd,buff,strlen(buff));
               bzero(buff,MAXLINE2);
               x = 1;
-            }else{
+            }else if(strncmp(buff,"empty",5)==0){
               sprintf(buff,"empty");
               write(connfd, buff, strlen(buff));
               bzero(buff,MAXLINE2);
               x = 1;
+            }else{
+              printf("GOT INTO RIGHT PART OF SERVER: %s\n",buff);
+              fileRead = fopen(buff,"r");
+              printf("SUCCESS OPENING FILE\n");
+              if (fileRead == NULL){
+                  perror("The file you are trying to read does not exist\n");
+                  exit(1);
+              }
+
+              /*
+               * Size of file being read set in global variable
+               */
+              fseek(fileRead,0L,SEEK_END);
+              printf("SUCCESS WITH PRINTF\n");
+              int fileSize = ftell(fileRead);
+              printf("SUCCESS WITH FILESIZE\n");
+              rewind(fileRead);
+              printf("SUCESS WITH REWIND\n");
+           
+              bzero(buff,MAXLINE2);
+              sprintf(buff,"%d",(long)fileSize); 
+              write(connfd, buff, strlen(buff));
+              bzero(buff,MAXLINE2); 
+              x = 1; 
             }           
         }else{
             printf("%s", buff);

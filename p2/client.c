@@ -27,8 +27,24 @@ int fileSize = -1; //size of file that has book
 int minimum = -1; //the minimum num of servers depending on file and user input
 int counter = 0; //set after first connection, only used to send leftover bytes -------------maybe unneeded-----------
 int remainderBytes = 0; //set as leftover bytes after dividing file size by minimum
-                        //value is added to only first connection
+                        //value is added to only first connection then set to 0
 int avgBytes = 0; //set as average number of bytes to send per connection
+int setBreak = 0; //variable set/unset when wanting to break while loops
+char *threadArrayPointer;
+
+/*
+ * A struct thread that will be used throughout this program to hold info about a thread
+ */
+typedef struct{
+    int thread_id;
+    FILE *reader;
+    char ipAddr[1024];
+    char portNumbr[1024];
+    int sockID;
+}Thread;
+
+//Thread pointer created -> pointer to an array of structs
+Thread *thread_pnt;
 
 /*
  * This method checks to make sure that the number of 
@@ -36,8 +52,8 @@ int avgBytes = 0; //set as average number of bytes to send per connection
  * throw an error otherwise.
  */
 void numArgs(int argc){
-    if (argc != 3){
-        perror("usage: a.out <server-info.txt> <num-connections>\n");
+    if (argc != 4){
+        perror("usage: a.out <server-info.txt> <num-connections> <filename>\n");
         exit(EXIT_FAILURE);
     }
 }
@@ -110,6 +126,7 @@ void createServerHelper(){
             createServer("127.0.0.1",portNumbr);
         else   
             createServer(ipAddr,portNumbr);
+            //createServer("127.0.0.1",portNumbr);
     }
 }
 
@@ -154,6 +171,9 @@ void getFileSizeAndMin(const char *fileToRead,const char *numConnections){
         minimum = tempNumConnections;
     }
 
+    thread_pnt = (Thread*)malloc(minimum*sizeof(Thread)); 
+    //thread_pnt[1].thread_id = 5;
+
     avgBytes = fileSize/minimum;
     remainderBytes = fileSize%minimum;
 }
@@ -183,8 +203,9 @@ void connectSocket(int sockfd){
  * This method will call createServerHelper and connectSocket within
  * a loop as well.
  */
-void readWriteSocket(int sockfd){
+void readWriteSocket(int sockfd, const char* fileName){
   int recfd; //the file descriptor for recieving messages
+  int setFileBytes = 0; //set and unset when wanting to know file size from server
 
   while(minimum > 0){
     createServerHelper();
@@ -193,20 +214,34 @@ void readWriteSocket(int sockfd){
       //or when the client sends an "exit" message
       while(1){
             bzero(sendline,1024); //zeroing out the buffer
-            printf("> ");
-            fgets(sendline, 1024, stdin); //gets user input
-            
+            if(setFileBytes == 0){
+                printf("GOT INTO SETFILEBYTES ONE\n");
+                sprintf(sendline,fileName);
+            }else{
+                printf("> ");
+                fgets(sendline, 1024, stdin); //gets user input
+            }
             //sends the message to the server 
             if( send(sockfd , sendline , strlen(sendline) , 0) < 0)
             {
                 perror("Send failed\n");
                 exit(1);
-            } 
+            }             
 
             //while loop that ends only when the server is done
             //sending its messages to the client            
             while( (recfd = recv(sockfd , recvline , MAXLINE , 0)) > 0)
             {
+
+            if(setFileBytes == 0){
+                printf("GOT INTO SETFILEBYTES TWO\n");
+                fputs(recvline,stdout);
+                setFileBytes = 1;
+                //fileSize = 
+                //set avg size
+                //set offset size
+                break;
+            }
 
             //variables created for allowing search of
             //the words "empty" and "exit" in recieved data
@@ -219,7 +254,8 @@ void readWriteSocket(int sockfd){
                 //client to close its socket and exit
                 if (strncmp(last_four,"exit",4) == 0){
                   close(sockfd);
-                  exit(0);
+                  setBreak = 1;
+                  break;
                 }
 
 
@@ -228,20 +264,25 @@ void readWriteSocket(int sockfd){
                 //enter its next command.
                 if(strncmp(last_five,"empty",5) == 0){
 
-              //allows client to print data up until "empty" 
-              //is also sent back by server
-              int buffLength = strlen(recvline) - 5;
-              printf("%.*s",buffLength,recvline + 0);
-                  break;
+                    //allows client to print data up until "empty" 
+                    //is also sent back by server
+                    int buffLength = strlen(recvline) - 5;
+                    printf("%.*s",buffLength,recvline + 0);
+                    break;
                 }
 
 
               fputs(recvline,stdout); //prints data received onto screen
               bzero(recvline,MAXLINE); //zero out buffer
-
+            
 
             }
-           
+          
+            if (setBreak == 1){
+                setBreak = 0;
+                break;
+            }
+ 
             //if there was a recieving error, it will accounted over here 
             if (recfd < 0){
                perror("recv failed on client\n");
@@ -254,7 +295,9 @@ void readWriteSocket(int sockfd){
             bzero(recvline,MAXLINE); //the recieving buffer is reset/zeroed
         }//close second while loop
     minimum--;
+    sockfd = createSocket();
   }//close first while loop
+  printf("COULD COME HER BUT NOT SUPPOSED TO\n");
 }//close method
 
 /*
@@ -266,18 +309,17 @@ main(int argc, char **argv)
 {
     numArgs(argc);
     checkServerFile(argv[1]);
-    getFileSizeAndMin("server.c",argv[2]);
-    printf("end of main, size of file read is: %d \n",fileSize);
+    getFileSizeAndMin(argv[3],argv[2]);
+    //printf("end of main, size of file read is: %d \n",fileSize);
     int sockfd = createSocket();
 
     //createServerHelper();
     //createServerHelper();
     //createServerHelper();
 
-    
     //int sockfd = createSocket();
     //createServer(argv[1],argv[2]);
     //connectSocket(sockfd);
-    readWriteSocket(sockfd);
+    readWriteSocket(sockfd,argv[3]);
     return 0;
 }
