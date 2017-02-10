@@ -26,7 +26,7 @@ char portNumbr[1024]; //max length of portNumbr - used when opening file
 int fileSize = -1; //size of file that has book
 int minimum = -1; //the minimum num of servers depending on file and user input
 int counter = 0; //set after first connection, only used to send leftover bytes -------------maybe unneeded-----------
-int remainderBytes = 0; //set as leftover bytes after dividing file size by minimum
+int remainderBytes = 0; //set as leftover bytes after dividing file size by minimum.
                         //value is added to only first connection then set to 0
 int avgBytes = 0; //set as average number of bytes to send per connection
 int setBreak = 0; //variable set/unset when wanting to break while loops
@@ -131,26 +131,13 @@ void createServerHelper(){
 }
 
 /*
- * Get the file's size that you need to read and also find the minimum
- * between the number of connections and the number of servers
+ * Gets the minimum between the number of the connections the user enters
+ * and the number of servers available for usage
  */
-void getFileSizeAndMin(const char *fileToRead,const char *numConnections){
+void getMin(const char *numConnections){
     int tempNumConnections = -1;
     int tempNumLines = 0;
     int ch = 0;
-
-    fileRead = fopen(fileToRead,"r");
-    if (fileRead == NULL){
-        perror("The file you are trying to read does not exist\n");
-        exit(1);
-    }
-
-    /*
-     * Size of file being read set in global variable
-     */
-    fseek(fileRead,0L,SEEK_END);
-    fileSize = ftell(fileRead);
-    rewind(fileRead);
 
     /*
      * Find number of lines and set numConnections to int
@@ -174,8 +161,6 @@ void getFileSizeAndMin(const char *fileToRead,const char *numConnections){
     thread_pnt = (Thread*)malloc(minimum*sizeof(Thread)); 
     //thread_pnt[1].thread_id = 5;
 
-    avgBytes = fileSize/minimum;
-    remainderBytes = fileSize%minimum;
 }
 
 /*
@@ -206,6 +191,9 @@ void connectSocket(int sockfd){
 void readWriteSocket(int sockfd, const char* fileName){
   int recfd; //the file descriptor for recieving messages
   int setFileBytes = 0; //set and unset when wanting to know file size from server
+                        //only set and unset once for first connection
+  int setSendBytes = 0; //set and unset when wanting to send the number of bytes
+                        //that the client wants the server to read from the file
 
   while(minimum > 0){
     createServerHelper();
@@ -214,12 +202,17 @@ void readWriteSocket(int sockfd, const char* fileName){
       //or when the client sends an "exit" message
       while(1){
             bzero(sendline,1024); //zeroing out the buffer
+            
+            //allows sending a string first to the server asking for
+            //the file size of the given file
             if(setFileBytes == 0){
                 printf("GOT INTO SETFILEBYTES ONE\n");
                 sprintf(sendline,fileName);
-            }else{
-                printf("> ");
-                fgets(sendline, 1024, stdin); //gets user input
+                setSendBytes = 1;
+            }else if(setSendBytes == 1){
+                printf("GOT INTO SETSENDBYTES ONE\n");
+                sprintf(sendline, "%d", (long) (avgBytes + remainderBytes));
+                remainderBytes = 0;
             }
             //sends the message to the server 
             if( send(sockfd , sendline , strlen(sendline) , 0) < 0)
@@ -233,16 +226,18 @@ void readWriteSocket(int sockfd, const char* fileName){
             while( (recfd = recv(sockfd , recvline , MAXLINE , 0)) > 0)
             {
 
+            //The file size and average bytes per connection and
+            //leftover bytes are all set below
             if(setFileBytes == 0){
                 printf("GOT INTO SETFILEBYTES TWO\n");
-                fputs(recvline,stdout);
                 setFileBytes = 1;
-                //fileSize = 
-                //set avg size
-                //set offset size
+                fileSize = atoi(recvline);
+                avgBytes = fileSize/minimum;
+                remainderBytes = fileSize%minimum;
                 break;
             }
 
+            /*
             //variables created for allowing search of
             //the words "empty" and "exit" in recieved data
             int myLength = strlen(recvline);
@@ -271,10 +266,13 @@ void readWriteSocket(int sockfd, const char* fileName){
                     break;
                 }
 
-
-              fputs(recvline,stdout); //prints data received onto screen
-              bzero(recvline,MAXLINE); //zero out buffer
-            
+            */
+              if(setSendBytes == 1){  
+                fputs(recvline,stdout); //prints data received onto screen
+                bzero(recvline,MAXLINE); //zero out buffer
+                printf("GONNA EXIT PROGRAM \n");
+                exit(1);
+              }
 
             }
           
@@ -309,7 +307,7 @@ main(int argc, char **argv)
 {
     numArgs(argc);
     checkServerFile(argv[1]);
-    getFileSizeAndMin(argv[3],argv[2]);
+    getMin(argv[2]);
     //printf("end of main, size of file read is: %d \n",fileSize);
     int sockfd = createSocket();
 
