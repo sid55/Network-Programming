@@ -245,7 +245,7 @@ void readWriteSocket(int sockfd, const char* fileName){
                 break;
             }
 
-            /*
+            
             //variables created for allowing search of
             //the words "empty" and "exit" in recieved data
             int myLength = strlen(recvline);
@@ -256,12 +256,16 @@ void readWriteSocket(int sockfd, const char* fileName){
                 //if client enters exit, this allows the
                 //client to close its socket and exit
                 if (strncmp(last_four,"exit",4) == 0){
+                /*
+                  int buffLength = strlen(recvline) - 5;
+                  printf("%.*s",buffLength,recvline + 0);
+                */
                   close(sockfd);
                   setBreak = 1;
                   break;
                 }
 
-
+            /*
                 //this message is for when the server is done
                 //sending its messages. It allows the client to 
                 //enter its next command.
@@ -283,12 +287,12 @@ void readWriteSocket(int sockfd, const char* fileName){
             }
         
             //printf("THE rec fd is:%d \n", recfd); 
-    /* 
+     
             if (setBreak == 1){
                 setBreak = 0;
                 break;
             }
-    */
+    
             //if there was a recieving error, it will accounted over here 
             if (recfd < 0){
                perror("recv failed on client\n");
@@ -304,6 +308,7 @@ void readWriteSocket(int sockfd, const char* fileName){
     counter++;
     sockfd = createSocket();
   }//close first while loop
+  fclose(fp); //fclose comes here?
   printf("COULD COME HER BUT NOT SUPPOSED TO\n");
 }//close method
 

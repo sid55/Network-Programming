@@ -160,6 +160,7 @@ int position = 0;
               x = 1;
             }else{
 
+              printf("THE FILE NAME IS: %s\n",buff);
               fileRead = fopen(buff,"r");
               printf("SUCCESS OPENING FILE\n");
               if (fileRead == NULL){
@@ -247,18 +248,26 @@ int position = 0;
                 bzero(buff,MAXLINE2);
             }
 
-            printf("\n\nVALUE OF WRITEFD IS: %d\n\n",writefd);
 
             if(writefd < 0){
                 perror("was not able to write data correctly\n");
                 exit(1);
             }else if(writefd == 0){
-                
+               bzero(buff,MAXLINE2);
+               sprintf(buff,"exit");
+               writefd = write(connfd,buff,strlen(buff));
+               if (writefd < 0){
+                    perror("server not able to write");
+                    exit(1);
+               }
+               bzero(buff,MAXLINE2);
+               close(connfd);
             }
  
             bzero(buff,MAXLINE2);
             bytesDivisible--;
         }
+        fclose(fileRead); //fclose here?
     }
 
 }
