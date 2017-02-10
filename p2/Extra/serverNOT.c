@@ -126,6 +126,7 @@ void readWriteServer(int connfd, int listenfd){
 
 int y = 0; //used to signal second phase of reading in data
 int x = 0;
+int z = 0;
 int bytesToRead = 0;
 int position = 0;
 
@@ -145,19 +146,16 @@ int position = 0;
         //if user enters nothing or for other cases like
         //that, the if else send a message called 
         //"empty" back to the client 
-            if(y == 1){
+            if(z == 1){
+              position = atoi(buff);
+              printf("found position on server: %d\n", position);
+              bzero(buff,MAXLINE2);
+              x = 1;
+            }else if(y == 1){
               bytesToRead = atoi(buff);
               printf("bytes to read on server: %d\n",bytesToRead);
               bzero(buff,MAXLINE2);
-              int tempp = recv(connfd,buff,MAXLINE2,0);
-              if (tempp < 0){
-                perror("prob with server reading\n");
-                exit(1);
-              }
-              position = atoi(buff);
-              printf("the position found is: %d\n",position);
-              bzero(buff,MAXLINE2);
-              x = 1;
+              z = 1;
             }else{
 
               fileRead = fopen(buff,"r");
@@ -184,6 +182,7 @@ int position = 0;
         //this while loop continually reads from the "in"
         //and puts in the results of popen, line by line
         //into the buffer which gets sent back to the client
+        printf("hung here??\n");
         bzero(buff,MAXLINE2);
         if (x == 1){
             break;
@@ -217,10 +216,6 @@ int position = 0;
     {
         perror("recv failed on server\n");
     }
-
-    //sets the position at where to start reading the file
-    fseek(fileRead,position,SEEK_SET);
-
 
     int writefd = -4;
     int newLen = 0;    

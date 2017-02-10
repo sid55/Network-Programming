@@ -149,14 +149,6 @@ int position = 0;
               bytesToRead = atoi(buff);
               printf("bytes to read on server: %d\n",bytesToRead);
               bzero(buff,MAXLINE2);
-              int tempp = recv(connfd,buff,MAXLINE2,0);
-              if (tempp < 0){
-                perror("prob with server reading\n");
-                exit(1);
-              }
-              position = atoi(buff);
-              printf("the position found is: %d\n",position);
-              bzero(buff,MAXLINE2);
               x = 1;
             }else{
 
@@ -217,10 +209,6 @@ int position = 0;
     {
         perror("recv failed on server\n");
     }
-
-    //sets the position at where to start reading the file
-    fseek(fileRead,position,SEEK_SET);
-
 
     int writefd = -4;
     int newLen = 0;    

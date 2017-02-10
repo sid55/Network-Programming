@@ -25,13 +25,14 @@ char ipAddr[1024]; //max length of ipaddress - used when opneing file
 char portNumbr[1024]; //max length of portNumbr - used when opening file
 int fileSize = -1; //size of file that has book
 int minimum = -1; //the minimum num of servers depending on file and user input
-int counter = 0; //set after first connection, used to calc position to set fseek on server
+int counter = 0; //set after first connection, used to help set fseek to a position
 int remainderBytes = 0; //set as leftover bytes after dividing file size by minimum.
                         //value is added to only first connection then set to 0
+int remainderBytes2 = 0; //will be used to store a copy of the original remainder
 int avgBytes = 0; //set as average number of bytes to send per connection
 int setBreak = 0; //variable set/unset when wanting to break while loops
 char *threadArrayPointer;
-int tempVal = 0; //used for finidng position initially
+
 /*
  * A struct thread that will be used throughout this program to hold info about a thread
  */
@@ -194,6 +195,7 @@ void readWriteSocket(int sockfd, const char* fileName){
                         //only set and unset once for first connection
   int setSendBytes = 0; //set and unset when wanting to send the number of bytes
                         //that the client wants the server to read from the file
+  int setPositionBytes = 0;
 
   while(minimum > 0){
     createServerHelper();
@@ -212,15 +214,13 @@ void readWriteSocket(int sockfd, const char* fileName){
             }else if(setSendBytes == 1){
                 printf("GOT INTO SETSENDBYTES ONE\n");
                 sprintf(sendline, "%d", (long) (avgBytes + remainderBytes));
-                int temp = send(sockfd,sendline,strlen(sendline),0);
-                if (temp < 0){
-                    perror("client not sending properly");
-                    exit(1);
-                }
-                bzero(sendline,1024);
-                sprintf(sendline, "%d", (long) (((avgBytes + remainderBytes)*tempVal)  + (avgBytes * counter)));
+                remainderBytes2 = remainderBytes;
                 remainderBytes = 0;
-                tempVal = 1;
+                setPositionBytes = 1;
+            }else if(setPositionBytes == 1){
+                printf("GOT INTO SENDING POSITION FROM CLIENT \n");
+                sprintf(sendline, "%d", (long) ((avgBytes + remainderBytes2) + (avgBytes * counter)));
+                setPositionBytes = 0;
             }
             //sends the message to the server 
             if( send(sockfd , sendline , strlen(sendline) , 0) < 0)
@@ -242,6 +242,11 @@ void readWriteSocket(int sockfd, const char* fileName){
                 fileSize = atoi(recvline);
                 avgBytes = fileSize/minimum;
                 remainderBytes = fileSize%minimum;
+                break;
+            }
+
+            if(setPositionBytes == 1){
+                printf("got into set inside while loop\n");
                 break;
             }
 
