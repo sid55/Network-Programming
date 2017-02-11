@@ -113,7 +113,6 @@ int acceptServer(int listenfd){
         return connfd;
 }
 
-
 /*
  * This method is the main meat of this program. It has an
  * infinite while loop, that will continuously read input from

@@ -9,18 +9,17 @@
 #include <arpa/inet.h>
 #include <string.h>
 
-#define MAXLINE2 40 //size of bytes for the buffer
+#define MAXLINE2 4096 //size of bytes for the buffer
 #define LISTENQ 1024 //size of the listening queue of clients
 
 int     listenfd, connfd,read_size; //the listen and accept file desciptors
 struct sockaddr_in servaddr; //the server address
-char    buff[MAXLINE2]; //the buffer which reads and sends lines
+char    recvBuff[MAXLINE2]; //the buffer which reads and sends lines
+char    sendBuff[MAXLINE2];
 time_t ticks; //ticks variable 
 int port; //server port number
-FILE *in; //will be used with popen
-extern FILE *popen(); //will be used with popen
 
-FILE *fileRead;
+FILE *fileRead; 
 
 /*
  * This method checks the number of arguments when running
@@ -60,14 +59,6 @@ void createServer(const char *portnum){
     servaddr.sin_family = AF_INET;
     servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
     servaddr.sin_port = htons(port); //sets the port number here
-   
-    /* 
-    char ipBuffer[80] = "128.32.16.1";
-    if (inet_pton(AF_INET, "127.0.0.1", &servaddr.sin_addr) <= 0){
-            perror("inet_pton error");
-            exit(1);
-    }
-    */
 }
 
 /*
@@ -105,14 +96,15 @@ void listenServer(int listenfd){
  * with the server. An error is thrown if a problem occurs.
  */
 int acceptServer(int listenfd){
+        printf("connfd before is: %d\n",connfd);
         connfd = accept(listenfd, (struct sockaddr *) NULL, NULL);
         if (connfd < 0){
             perror("accept error\n");
             exit(1);
-        } 
+        }
+        printf("connfd after is: %d\n",connfd); 
         return connfd;
 }
-
 
 /*
  * This method is the main meat of this program. It has an
@@ -124,46 +116,31 @@ int acceptServer(int listenfd){
  * who prints the output onto the screen.
  */
 void readWriteServer(int connfd, int listenfd){
-
-int y = 0; //used to signal second phase of reading in data
-int x = 0;
-int bytesToRead = 0;
-int position = 0;
-
-  while( (read_size = recv(connfd , buff , MAXLINE2 , 0)) > 0 )
+int bytesToRead;
+int position;
+int sendfd;
+bzero(recvBuff,MAXLINE2);
+bzero(sendBuff,MAXLINE2);
+  while( (read_size = recv(connfd , recvBuff , MAXLINE2 , 0)) > 0 )
     {
-        //makes it possible to put the buffer
-        //into a file. popen executes the command
-        //that the client gives to it.
-
-        /*
-        if (!(in = popen(buff, "r"))) {
-          perror("Not able to read stream");
-          exit(1);
-        } 
-        */
+	//this int value will be used to ensure that
+	//that fgets doesnt get called twice when only is
+	//supposed to get called once
 
         //if user enters nothing or for other cases like
         //that, the if else send a message called 
         //"empty" back to the client 
-            if(y == 1){
-              bytesToRead = atoi(buff);
-              printf("bytes to read on server: %d\n",bytesToRead);
-              bzero(buff,MAXLINE2);
-              int tempp = recv(connfd,buff,MAXLINE2,0);
-              if (tempp < 0){
-                perror("prob with server reading\n");
-                exit(1);
-              }
-              position = atoi(buff);
-              printf("the position found is: %d\n",position);
-              bzero(buff,MAXLINE2);
-              x = 1;
-            }else{
-
-              printf("THE FILE NAME IS: %s\n",buff);
-              fileRead = fopen(buff,"r");
-              printf("SUCCESS OPENING FILE\n");
+        if(strncmp(recvBuff,"exit",4) == 0){
+              printf("Got into exit section\n");
+              sprintf(sendBuff,"exit");
+              write(connfd,sendBuff,strlen(sendBuff));
+              bzero(sendBuff,MAXLINE2);
+        }else if(strncmp(recvBuff,"filename",7) == 0){
+              printf("got into filename section: %s\n",recvBuff);
+              bzero(sendBuff,MAXLINE2);
+              char subBuff[200];
+              memcpy(subBuff, &recvBuff[8], strlen(recvBuff));
+              fileRead = fopen(subBuff,"r");
               if (fileRead == NULL){
                   perror("The file you are trying to read does not exist\n");
                   exit(1);
@@ -175,102 +152,106 @@ int position = 0;
               fseek(fileRead,0L,SEEK_END);
               int fileSize = ftell(fileRead);
               rewind(fileRead);
-           
-              bzero(buff,MAXLINE2);
-              sprintf(buff,"%d",(long)fileSize); 
-              write(connfd, buff, strlen(buff));
-              bzero(buff,MAXLINE2); 
-              y = 1; 
+    
+              sprintf(sendBuff,"sizeFile");
+              sprintf(sendBuff + strlen(sendBuff),"%d",(long)fileSize); 
+              sendfd = write(connfd, sendBuff, strlen(sendBuff));
+              if(sendfd < 0){
+                perror("send error");
+                exit(1);
+              }
+              bzero(sendBuff,MAXLINE2); 
+              bzero(recvBuff,MAXLINE2);
+        }else if(strncmp(recvBuff,"size",4) == 0){
+              printf("the recvbuff in size is: %s\n",recvBuff);
+              bzero(sendBuff,MAXLINE2);
+              char subBuff2[200];
+              memcpy(subBuff2, &recvBuff[4], strlen(recvBuff));
+              bytesToRead = atoi(subBuff2);
+
+              sprintf(sendBuff,"needPos");
+              sendfd = write(connfd, sendBuff, strlen(sendBuff));
+              if(sendfd < 0){
+                perror("send error");
+                exit(1);
+              }
+              bzero(subBuff2,MAXLINE2);
+              bzero(recvBuff,MAXLINE2);
+        }else if(strncmp(recvBuff,"position",8) == 0){
+              printf("the recvbuff in position is: %s\n", recvBuff);
+              bzero(sendBuff,MAXLINE2);
+              char subBuff3[200];
+              memcpy(subBuff3, &recvBuff[8], strlen(recvBuff));
+              position = atoi(subBuff3);
+
+               
+            int writefd = 0;
+            int newLen = 0;    
+            int bytesDivisible = 0;
+            int bytesRemainder = 0;    
+
+            bzero(sendBuff,MAXLINE2);
+            bzero(recvBuff,MAXLINE2);
+            bytesDivisible = bytesToRead/MAXLINE2;
+            bytesRemainder = bytesToRead%MAXLINE2;
+
+            while(bytesDivisible >= 0){
+                bzero(sendBuff,MAXLINE2);
+                if(bytesDivisible == 0){
+                    newLen = fread(sendBuff,sizeof(char),bytesRemainder,fileRead);
+                    fseek(fileRead,bytesRemainder,SEEK_SET); 
+                }else{
+                    newLen = fread(sendBuff,sizeof(char),MAXLINE2,fileRead);
+                    fseek(fileRead,MAXLINE2,SEEK_SET);
+                }
+                while ((writefd = write(connfd, sendBuff, strlen(sendBuff))) > 0) {
+                    printf("PRINT: %s\n", sendBuff);
+                    bzero(sendBuff,MAXLINE2);
+                }
+
+
+                if(writefd < 0){
+                    perror("was not able to write data correctly\n");
+                    exit(1);
+                }else if(writefd == 0){
+                   bzero(sendBuff,MAXLINE2);
+                   sprintf(sendBuff,"exit");
+                   writefd = write(connfd,sendBuff,strlen(sendBuff));
+                   if (writefd < 0){
+                        perror("server not able to write");
+                        exit(1);
+                   }
+                   bzero(sendBuff,MAXLINE2);
+                }
+     
+                bzero(sendBuff,MAXLINE2);
+                bytesDivisible--;
             }
-           
-        //this while loop continually reads from the "in"
-        //and puts in the results of popen, line by line
-        //into the buffer which gets sent back to the client
-        bzero(buff,MAXLINE2);
-        if (x == 1){
-            break;
+            fclose(fileRead); //fclose here?
+
+              bzero(sendBuff,MAXLINE2);
+              bzero(recvBuff,MAXLINE2);
         }
- 
-/* 
-        //this if statement sends a final message to the client
-        //letting it know its done sending messages and allows the
-        //client to type a new command
-        if((fgets(buff,sizeof(buff), in) == NULL) && (x==0)){
-            bzero(buff,MAXLINE2);
-            sprintf(buff,"empty");
-            write(connfd, buff, strlen(buff));
-            bzero(buff,MAXLINE2);
+        else{
+              printf("Came into section not supposed to yet\n");
         }
-        pclose(in);
-        bzero(buff,MAXLINE2); //zeroes/resets the buffer
-*/
+        printf("sanity check\n");   
+        bzero(recvBuff,MAXLINE2); //zeroes/resets the buffer
     }
- 
+    printf("Left while loop\n"); 
     //this is for when the client is done sending
     //its messages to the server. The client disconnects.     
-/*
     if(read_size == 0)
     {
-        printf("GETS INTO CLOSE FOR SERVER\n");
+        printf("the read_size is 0\n");
+        printf("before close connfd is: %d\n",connfd);
         close(connfd); //closes the file descriptor returned by accept
+        printf("after close connfd is: %d\n",connfd);
     }
-    else */
-    if(read_size < 0)
+    else if(read_size < 0)
     {
         perror("recv failed on server\n");
     }
-
-    //sets the position at where to start reading the file
-    fseek(fileRead,position,SEEK_SET);
-
-
-    int writefd = -4;
-    int newLen = 0;    
-    int bytesDivisible = 0;
-    int bytesRemainder = 0;    
-
-    if (x == 1){
-        printf("Got into write system call\n");
-        bzero(buff,MAXLINE2);
-        bytesDivisible = bytesToRead/MAXLINE2;
-        bytesRemainder = bytesToRead%MAXLINE2;
-
-        while(bytesDivisible >= 0){
-            bzero(buff,MAXLINE2);
-            if(bytesDivisible == 0){
-                newLen = fread(buff,sizeof(char),bytesRemainder,fileRead);
-                fseek(fileRead,bytesRemainder,SEEK_SET); 
-            }else{
-                newLen = fread(buff,sizeof(char),MAXLINE2,fileRead);
-                fseek(fileRead,MAXLINE2,SEEK_SET);
-            }
-            while ((writefd = write(connfd, buff, strlen(buff))) > 0) {
-                printf("PRINT: %s\n", buff);
-                bzero(buff,MAXLINE2);
-            }
-
-
-            if(writefd < 0){
-                perror("was not able to write data correctly\n");
-                exit(1);
-            }else if(writefd == 0){
-               bzero(buff,MAXLINE2);
-               sprintf(buff,"exit");
-               writefd = write(connfd,buff,strlen(buff));
-               if (writefd < 0){
-                    perror("server not able to write");
-                    exit(1);
-               }
-               bzero(buff,MAXLINE2);
-               close(connfd);
-            }
- 
-            bzero(buff,MAXLINE2);
-            bytesDivisible--;
-        }
-        fclose(fileRead); //fclose here?
-    }
-
 }
 
 /*
@@ -301,5 +282,6 @@ main(int argc, char **argv)
   bindServer(listenfd);
   listenServer(listenfd);
   acceptReadWriteServer(listenfd);
+  exit(1);
   return 0;
 }

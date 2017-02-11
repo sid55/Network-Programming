@@ -174,8 +174,6 @@ void connectSocket(int sockfd){
     }
 }
 
-int setFile = 0;
-
 /*
  * The main logic of this program is in this method. The client 
  * communicates with the server using the send and recv system 
@@ -191,7 +189,6 @@ int setFile = 0;
  * a loop as well.
  */
 void readWriteSocket(int sockfd, const char* fileName){
-  int sendfd;
   int recfd; //the file descriptor for recieving messages
   int setFileBytes = 0; //set and unset when wanting to know file size from server
                         //only set and unset once for first connection
@@ -204,80 +201,85 @@ void readWriteSocket(int sockfd, const char* fileName){
       //infinite while loop that exits either during an error
       //or when the client sends an "exit" message
       while(1){
+            bzero(sendline,1024); //zeroing out the buffer
+            
             //allows sending a string first to the server asking for
             //the file size of the given file
-            bzero(sendline,1024);
-
-            if (setFile == 0){
-                printf("got into setfile = 0\n");
-                sprintf(sendline,"filename");
-                sprintf(sendline + strlen(sendline),fileName);
-                setFile = 1;
-            }else if (setFile == 1){
-                printf("got into setFile = 1\n");
-                sprintf(sendline,"size");
-                sprintf(sendline + strlen(sendline), "%d", (long) (avgBytes + remainderBytes));
-                setFile = 2;
-            }else if (setFile == 2){
-                printf("got into setFile = 2\n");
-                sprintf(sendline,"position");
-                sprintf(sendline + strlen(sendline), "%d", (long) (((avgBytes + remainderBytes)*tempVal)  + (avgBytes * counter)));
+            if(setFileBytes == 0){
+                printf("GOT INTO SETFILEBYTES ONE\n");
+                sprintf(sendline,fileName);
+                setSendBytes = 1;
+            }else if(setSendBytes == 1){
+                printf("GOT INTO SETSENDBYTES ONE\n");
+                sprintf(sendline, "%d", (long) (avgBytes + remainderBytes));
+                int temp = send(sockfd,sendline,strlen(sendline),0);
+                if (temp < 0){
+                    perror("client not sending properly");
+                    exit(1);
+                }
+                bzero(sendline,1024);
+                sprintf(sendline, "%d", (long) (((avgBytes + remainderBytes)*tempVal)  + (avgBytes * counter)));
                 remainderBytes = 0;
                 tempVal = 1;
-                setFile = 3;
             }
-
             //sends the message to the server 
             if( send(sockfd , sendline , strlen(sendline) , 0) < 0)
             {
                 perror("Send failed\n");
-                exit(1);     
+                exit(1);
             }             
-           
-            printf("the sendline after send is: %s\n",sendline);
-     
+
             //while loop that ends only when the server is done
             //sending its messages to the client            
             while( (recfd = recv(sockfd , recvline , MAXLINE , 0)) > 0)
             {
 
-            int myLength = strlen(recvline);
-            const char *gotSizeofFile = &recvline[myLength-5];
-            const char *last_four = &recvline[myLength-4];	    
-            //const char *last_four = &recvline[myLength-4];	    
-            //const char *last_four = &recvline[myLength-4];	    
-            //const char *last_four = &recvline[myLength-4];	    
-
-            if(strncmp(recvline,"sizeFile",8) == 0){
-                printf("came into sizeFile: %s\n",recvline);
-                char subBuff[200];
-                memcpy(subBuff, &recvline[8], strlen(recvline));
-                fileSize = atoi(subBuff);
+            //The file size and average bytes per connection and
+            //leftover bytes are all set below
+            if(setFileBytes == 0){
+                printf("GOT INTO SETFILEBYTES TWO\n");
+                setFileBytes = 1;
+                fileSize = atoi(recvline);
                 avgBytes = fileSize/minimum;
                 remainderBytes = fileSize%minimum;
-                bzero(recvline,MAXLINE);
-                break; 
-            }
-
-            if(strncmp(recvline,"needPos",7) == 0){
-                printf("came into needPos: %s\n", recvline);
                 break;
             }
 
+            
+            //variables created for allowing search of
+            //the words "empty" and "exit" in recieved data
+            int myLength = strlen(recvline);
+            const char *last_five = &recvline[myLength-5];
+            const char *last_four = &recvline[myLength-4];	    
+
+
                 //if client enters exit, this allows the
                 //client to close its socket and exit
-            if (strncmp(last_four,"exit",4) == 0){
+                if (strncmp(last_four,"exit",4) == 0){
                 /*
                   int buffLength = strlen(recvline) - 5;
                   printf("%.*s",buffLength,recvline + 0);
                 */
-                 printf("got into exit\n");
-                 close(sockfd);
-                 setBreak = 1;
-                 break;
-              }
+                  close(sockfd);
+                  setBreak = 1;
+                  break;
+                }
 
-              if(setFile == 3){
+            /*
+                //this message is for when the server is done
+                //sending its messages. It allows the client to 
+                //enter its next command.
+                if(strncmp(last_five,"empty",5) == 0){
+
+                    //allows client to print data up until "empty" 
+                    //is also sent back by server
+                    int buffLength = strlen(recvline) - 5;
+                    printf("%.*s",buffLength,recvline + 0);
+                    break;
+                }
+
+            */
+              if(setSendBytes == 1){
                 printf("%s",recvline); //prints data received onto screen
                 bzero(recvline,MAXLINE); //zero out buffer
               }
@@ -298,7 +300,6 @@ void readWriteSocket(int sockfd, const char* fileName){
             }
             if (recfd == 0){
                perror("recfd is equal to zero");
-               exit(1);
             }
 
             bzero(recvline,MAXLINE); //the recieving buffer is reset/zeroed
