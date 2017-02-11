@@ -11,33 +11,36 @@
 
 #define MAXLINE 4096 //size of buffer
 
+int     sockfd, n; //the socket file descriptor
 char    recvline[MAXLINE + 1], sendline[1024]; //the recieve and send buffers
 struct sockaddr_in servaddr; //the server address
+int port; //the server port number
 
 FILE *fp; //pointer to server list file
+FILE *fileRead; //pointer to file that has book
 char line [1024]; //assumption line length of 1024 bytes
+size_t len = 0;
+ssize_t readfp;
+char ipAddr[1024]; //max length of ipaddress - used when opneing file
+char portNumbr[1024]; //max length of portNumbr - used when opening file
 int fileSize = -1; //size of file that has book
+int minimum = -1; //the minimum num of servers depending on file and user input
 int counter = 0; //set after first connection, used to calc position to set fseek on server
 int remainderBytes = 0; //set as leftover bytes after dividing file size by minimum.
                         //value is added to only first connection then set to 0
 int avgBytes = 0; //set as average number of bytes to send per connection
-int setFile = 0;
+int setBreak = 0; //variable set/unset when wanting to break while loops
+char *threadArrayPointer;
+int tempVal = 0; //used for finidng position initially
 /*
  * A struct thread that will be used throughout this program to hold info about a thread
  */
 typedef struct{
     int thread_id;
     FILE *reader;
-    FILE *fp;
-    //char ipAddr[1024];
-    //char portNumbr[1024];
-    int avgBytes;
-    int remainderBytes;
-    int counter;
-    int minimum;
-    int fileSize;
-    struct sockaddr_in servaddr; //the server address
-    int tempVal;
+    char ipAddr[1024];
+    char portNumbr[1024];
+    int sockID;
 }Thread;
 
 //Thread pointer created -> pointer to an array of structs
@@ -63,12 +66,12 @@ void numArgs(int argc){
  * will be returned.
  */
 int createSocket(){
-    int sockfdtemp = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfdtemp < 0){
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd < 0){
         perror("socket error\n");
         exit(1);
     }
-    return sockfdtemp;
+    return sockfd;
 }
 
 /*
@@ -78,7 +81,6 @@ int createSocket(){
  * client can communicate with the server.
  */
 void createServer(const char *ipaddr, const char *portnum){
-    int port;
     //if(minimum > 0){
         sscanf(portnum,"%d",&port);  //port number specified
         bzero(&servaddr, sizeof(servaddr));
@@ -117,9 +119,7 @@ void checkServerFile(const char *filename){
  * Finds the next server in list of servers and sets its
  * variables on the client side
  */
-void createServerHelper(int sockfd){
-    char ipAddr[1024]; //max length of ipaddress - used when opneing file
-    char portNumbr[1024]; //max length of portNumbr - used when opening file
+void createServerHelper(){
     if(fscanf(fp,"%s %s",ipAddr,portNumbr) > 0){
         printf("%s %s \n",ipAddr,portNumbr);
         if (strncmp(ipAddr,"localhost",9) == 0)
@@ -151,43 +151,15 @@ void getMin(const char *numConnections){
     }
     rewind(fp);
 
-    int minimumTemp;
     //Set the minimum to one of those values
     if(tempNumLines <= tempNumConnections){
-        minimumTemp = tempNumLines;
+        minimum = tempNumLines;
     }else{
-        minimumTemp = tempNumConnections;
+        minimum = tempNumConnections;
     }
 
-    //zero connections = throw error
-    if (minimumTemp = 0){
-        perror("Not enough servers to connect to\n");
-        exit(1);
-    }
-
-    //set minimum in thread struct
-    printf("GETS THIS FAR\n");
-    thread_pnt = (Thread*)malloc(minimumTemp*sizeof(Thread));
-    int minTemp = minimumTemp -1;
-    while(minTemp > -1){
-        thread_pnt[minTemp].minimum = minimumTemp;
-        minTemp--;
-    }
-
-    //set tempVal used for calculation in thread struct   
-    thread_pnt[0].tempVal = 0;
-    minTemp = minimumTemp - 1;
-    while(minTemp > 0){
-        thread_pnt[minTemp].tempVal = 1;
-        minTemp--;
-    }
- 
+    thread_pnt = (Thread*)malloc(minimum*sizeof(Thread)); 
     //thread_pnt[1].thread_id = 5;
-
-}
-
-void getFileSize(){
-
 
 }
 
@@ -202,6 +174,7 @@ void connectSocket(int sockfd){
     }
 }
 
+int setFile = 0;
 
 /*
  * The main logic of this program is in this method. The client 
@@ -217,54 +190,17 @@ void connectSocket(int sockfd){
  * This method will call createServerHelper and connectSocket within
  * a loop as well.
  */
-void readWriteSocket(Thread threadInfo, const char* fileName){
-    int sendfd;
-    int recfd; //the file descriptor for recieving messages
-    int setBreak = 0; //variable set/unset when wanting to break while loops
-    struct sockaddr_in servaddr; //the server address
+void readWriteSocket(int sockfd, const char* fileName){
+  int sendfd;
+  int recfd; //the file descriptor for recieving messages
+  int setFileBytes = 0; //set and unset when wanting to know file size from server
+                        //only set and unset once for first connection
+  int setSendBytes = 0; //set and unset when wanting to send the number of bytes
+                        //that the client wants the server to read from the file
 
-
-    int sockfd = createSocket();
-
-    //Create the server with its info below
-    int port;
-    char ipAddr[1024]; //max length of ipaddress - used when opneing file
-    char portNumbr[1024]; //max length of portNumbr - used when opening file
-    if(fscanf(fp,"%s %s",ipAddr,portNumbr) > 0){
-        printf("%s %s \n",ipAddr,portNumbr);
-        if (strncmp(ipAddr,"localhost",9) == 0){
-            sscanf(portNumbr,"%d",&port);  //port number specified
-            bzero(&servaddr, sizeof(servaddr));
-            servaddr.sin_family = AF_INET;
-            servaddr.sin_port = htons(port); //port number being set
-    
-            //ip address specified below by the user  
-            if (inet_pton(AF_INET, "127.0.0.1", &servaddr.sin_addr) <= 0){
-                perror("inet_pton error");
-                exit(1);
-            }
-        }else{   
-            sscanf(portNumbr,"%d",&port);  //port number specified
-            bzero(&servaddr, sizeof(servaddr));
-            servaddr.sin_family = AF_INET;
-            servaddr.sin_port = htons(port); //port number being set
-    
-            //ip address specified below by the user  
-            if (inet_pton(AF_INET, ipAddr, &servaddr.sin_addr) <= 0){
-                perror("inet_pton error");
-                exit(1);
-            }
-        }        
-    }
-
-
-    //connect the the server's socket here
-    if (connect(sockfd, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0){
-        perror("connect error\n");
-        exit(1);
-    }
-
- 
+  while(minimum > 0){
+    createServerHelper();
+    connectSocket(sockfd); 
       //infinite while loop that exits either during an error
       //or when the client sends an "exit" message
       while(1){
@@ -285,9 +221,9 @@ void readWriteSocket(Thread threadInfo, const char* fileName){
             }else if (setFile == 2){
                 printf("got into setFile = 2\n");
                 sprintf(sendline,"position");
-                sprintf(sendline + strlen(sendline), "%d", (long) (((avgBytes + remainderBytes)*threadInfo.tempVal)  + (avgBytes * counter)));
+                sprintf(sendline + strlen(sendline), "%d", (long) (((avgBytes + remainderBytes)*tempVal)  + (avgBytes * counter)));
                 remainderBytes = 0;
-                threadInfo.tempVal = 1;
+                tempVal = 1;
                 setFile = 3;
             }
 
@@ -317,8 +253,8 @@ void readWriteSocket(Thread threadInfo, const char* fileName){
                 char subBuff[200];
                 memcpy(subBuff, &recvline[8], strlen(recvline));
                 fileSize = atoi(subBuff);
-                avgBytes = fileSize/threadInfo.minimum;
-                remainderBytes = fileSize%threadInfo.minimum;
+                avgBytes = fileSize/minimum;
+                remainderBytes = fileSize%minimum;
                 bzero(recvline,MAXLINE);
                 break; 
             }
@@ -367,13 +303,12 @@ void readWriteSocket(Thread threadInfo, const char* fileName){
 
             bzero(recvline,MAXLINE); //the recieving buffer is reset/zeroed
         }//close second while loop
-    //minimum--;
-    //counter++;
-    //sockfd = createSocket();
-
+    minimum--;
+    counter++;
+    sockfd = createSocket();
+  }//close first while loop
   fclose(fp); //fclose comes here?
-  //maybe close socket here too
-  printf("ending of thread method\n");
+  printf("COULD COME HER BUT NOT SUPPOSED TO\n");
 }//close method
 
 /*
@@ -387,7 +322,7 @@ main(int argc, char **argv)
     checkServerFile(argv[1]);
     getMin(argv[2]);
     //printf("end of main, size of file read is: %d \n",fileSize);
-    //int sockfd = createSocket();
+    int sockfd = createSocket();
 
     //createServerHelper();
     //createServerHelper();
@@ -396,6 +331,6 @@ main(int argc, char **argv)
     //int sockfd = createSocket();
     //createServer(argv[1],argv[2]);
     //connectSocket(sockfd);
-    readWriteSocket(thread_pnt[0],argv[3]);
+    readWriteSocket(sockfd,argv[3]);
     return 0;
 }
