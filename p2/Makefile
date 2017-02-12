@@ -1,10 +1,13 @@
 #Makefile extracomment
 
-client: client.c
-	gcc -Wall client.c -o client
-
-server: server2.c
+all: server2.c
+	rm -f client server2 *.o
 	gcc -Wall server2.c -o server2
+	./server2 9999
+
+c: client.c
+	gcc -Wall client.c -o client
+	./client server-info.txt 2 Makefile
 
 clean: 
 	rm -f client server2 *.o
