@@ -135,6 +135,7 @@ bzero(sendBuff,MAXLINE2);
               sprintf(sendBuff,"exit");
               write(connfd,sendBuff,strlen(sendBuff));
               bzero(sendBuff,MAXLINE2);
+              fclose(fileRead);
         }else if(strncmp(recvBuff,"filename",7) == 0){
               printf("got into filename section: %s\n",recvBuff);
               bzero(sendBuff,MAXLINE2);
@@ -160,6 +161,29 @@ bzero(sendBuff,MAXLINE2);
                 perror("send error");
                 exit(1);
               }
+              fclose(fileRead);
+              bzero(sendBuff,MAXLINE2); 
+              bzero(recvBuff,MAXLINE2);
+        }else if(strncmp(recvBuff,"openfile",7) == 0){
+              printf("got into filename section: %s\n",recvBuff);
+              bzero(sendBuff,MAXLINE2);
+              char subBuff5[200];
+              memcpy(subBuff5, &recvBuff[8], strlen(recvBuff));
+              fileRead = fopen(subBuff5,"r");
+              if (fileRead == NULL){
+                  perror("The file you are trying to read does not exist\n");
+                  exit(1);
+              }
+
+              bzero(sendBuff,MAXLINE2);
+              sprintf(sendBuff,"openFile2");
+              sendfd = write(connfd, sendBuff, strlen(sendBuff));
+              if(sendfd < 0){
+                perror("send error");
+                exit(1);
+              }
+
+
               bzero(sendBuff,MAXLINE2); 
               bzero(recvBuff,MAXLINE2);
         }else if(strncmp(recvBuff,"size",4) == 0){
@@ -178,31 +202,49 @@ bzero(sendBuff,MAXLINE2);
               bzero(subBuff2,MAXLINE2);
               bzero(recvBuff,MAXLINE2);
         }else if(strncmp(recvBuff,"position",8) == 0){
-              printf("the recvbuff in position is: %s\n", recvBuff);
               bzero(sendBuff,MAXLINE2);
               char subBuff3[200];
               memcpy(subBuff3, &recvBuff[8], strlen(recvBuff));
               position = atoi(subBuff3);
+            printf("the position is: %d\n", position);
 
-               
+            //anothr change?
+            if (fileRead == NULL){
+                printf("FOUND MY ERROR\n");
+                exit(1);
+            }
+            rewind(fileRead);
+            fseek(fileRead,position,SEEK_SET);
+            printf("Success in fseek 0th time\n");
+                   
             int writefd = 0;
             int newLen = 0;    
             int bytesDivisible = 0;
             int bytesRemainder = 0;    
 
+            //fix issue?
+            //bytesToRead--;
+
             bzero(sendBuff,MAXLINE2);
             bzero(recvBuff,MAXLINE2);
             bytesDivisible = bytesToRead/MAXLINE2;
             bytesRemainder = bytesToRead%MAXLINE2;
-
+            printf("11111111111111111111111111\n");
+            printf("the bytesRemainder is: %d\n",bytesRemainder);
+            printf("the bytesDivisible is: %d\n",bytesDivisible);
             while(bytesDivisible >= 0){
                 bzero(sendBuff,MAXLINE2);
                 if(bytesDivisible == 0){
+                    printf("came into first time\n");
                     newLen = fread(sendBuff,sizeof(char),bytesRemainder,fileRead);
-                    fseek(fileRead,bytesRemainder,SEEK_SET); 
+                    printf("the newLen is: %d\n",newLen);
+                    fseek(fileRead,bytesRemainder,SEEK_SET);
+                    printf("able to do fseek first time\n"); 
                 }else{
+                    printf("came into second time\n");
                     newLen = fread(sendBuff,sizeof(char),MAXLINE2,fileRead);
                     fseek(fileRead,MAXLINE2,SEEK_SET);
+                    printf("able to do fseek second time\n");
                 }
                 while ((writefd = write(connfd, sendBuff, strlen(sendBuff))) > 0) {
                     printf("PRINT: %s\n", sendBuff);
@@ -227,6 +269,7 @@ bzero(sendBuff,MAXLINE2);
                 bzero(sendBuff,MAXLINE2);
                 bytesDivisible--;
             }
+            printf("333333333333333333333333333\n");
             fclose(fileRead); //fclose here?
 
               bzero(sendBuff,MAXLINE2);

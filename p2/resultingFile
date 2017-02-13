@@ -1,0 +1,394 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>          
+#include <sys/socket.h>
+#include <strings.h>
+#include <unistd.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <string.h>
+
+#define MAXLINE 4096 //size of buffer
+
+/*
+ * NOTE: All these global variables are not being used in the method
+ *       called by pthread_create
+ */
+//CHANGED MAXLINE + 1 to MAXLINE
+char    recvline[MAXLINE], sendline[1024]; //the recieve and send buffers
+struct sockaddr_in servaddr2; //the server address
+
+int minimum; //leave as global->not used with threads
+FILE *fp; //pointer to server list file, leave as global->not used with threads
+
+int fileSize = -1; //size of file that has book
+int remainderBytes = 0; //set as leftover bytes after dividing file size by minimum.
+                        //value is added to only first connection then set to 0
+int avgBytes = 0; //set as average number of bytes to send per connection
+/*
+ * A struct thread that will be used throughout this program to hold info about a thread
+ */
+typedef struct{
+    char recvline[MAXLINE + 1]; //finished setting
+    char sendline[1024]; //finished setting
+    int thread_id; //finished setting
+    FILE *reader; //used to create sep file to put recvbuff into
+    FILE *fp; //finished setting
+    //char ipAddr[1024]; //unneeded?
+    //char portNumbr[1024]; //uneeded?
+    int avgBytes; //finished setting
+    int remainderBytes; //finished setting
+    int minimum; //finished setting
+    int fileSize; //finished setting
+    //struct sockaddr_in servaddr; //the server address ---> may not need
+    int tempVal; //finished setting
+    int setFile; //finished setting
+    int counter; //finished setting
+    char myFileName[1024];
+    char fileOnServer[200];
+}Thread;
+
+//Thread pointer created -> pointer to an array of structs
+Thread *thread_pnt;
+
+/*
+ * This method checks to make sure that the number of 
+ * arguments is not invalid and above 3. It will
+ * throw an error otherwise.
+ */
+void numArgs(int argc){
+    if (argc != 4){
+        perror("usage: a.out <server-info.txt> <num-connections> <filename>\n");
+        exit(EXIT_FAILURE);
+    }
+}
+
+/*
+ * This method creates a socket on the client side so that
+ * the client can interact with the server on this socket.
+ * If a socket cannot be created, an error will be thrown. 
+ * If there is no error, the socket file descriptor 
+ * will be returned.
+ */
+int createSocket(){
+    int sockfdtemp = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfdtemp < 0){
+        perror("socket error\n");
+        exit(1);
+    }
+    return sockfdtemp;
+}
+
+/*
+ * This method gives the server information such as the port
+ * number specified by the user and the ip address. It allows
+ * the client to know information about the server so that the
+ * client can communicate with the server.
+ */
+void createServer(const char *ipaddr, const char *portnum){
+    int port;
+    //if(minimum > 0){
+        sscanf(portnum,"%d",&port);  //port number specified
+        bzero(&servaddr2, sizeof(servaddr2));
+        servaddr2.sin_family = AF_INET;
+        servaddr2.sin_port = htons(port); //port number being set
+    
+        //ip address specified below by the user  
+        if (inet_pton(AF_INET, ipaddr, &servaddr2.sin_addr) <= 0){
+            perror("inet_pton error");
+            exit(1);
+        }
+    //    minimum--;
+    //}else{
+    //    perror("Not enough servers to connect to");
+    //    exit(EXIT_FAILURE);
+    //}
+}
+
+/*
+ * Makes sure that the server file list provided exists and 
+ * that it can be successfully opened.
+ */
+void checkServerFile(const char *filename){
+    if (strncmp(filename,"server-info.txt",15) != 0){
+        perror("The file should be server-info.txt\n");
+        exit(EXIT_FAILURE);
+    }
+    fp = fopen(filename,"r");
+    if (fp == NULL){
+        perror("The file you are trying to open does not exist\n");
+        exit(1);
+    }
+}
+
+//Passing in the filename and the thread object index
+void checkServerFile2(const char *filename, Thread threadInfo){
+    if (strncmp(filename,"server-info.txt",15) != 0){
+        perror("The       fileSize = atoi(subBuff);
+            avgBytes = fileSize/minimum;
+            remainderBytes = fileSize%minimum;
+            bzero(recvline,MAXLINE);
+            break; 
+        }
+    }
+
+    close(sockfd);
+    rewind(fp);
+}
+
+/*
+ * This method actually tries to connect the client with the server
+ * by using the connect system call.
+ */ 
+void connectSocket(int sockfd){      
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+}
+
+/*
+ * Sets avg, total, and remainder in thread_ptr
+ */
+void setAvgEtc(){
+    int count = 1;
+    int minTemp = minimum - 1;
+    //can check avgbytes etc info here
+    //printf("avgBytes is: %d",avgBytes);
+    //printf("fileSize is: %d",fileSize);
+
+    thread_pnt[0].fileSize = fileSize;
+    thread_pnt[0].remainderBytes = remainderBytes;
+    thread_pnt[0].avgBytes = avgBytes;
+ 
+    while(count <= minTemp){
+        thread_pnt[count].fileSize = fileSize;
+        thread_pnt[count].remainderBytes = 0;
+        thread_pnt[count].avgBytes = avgBytes;
+        count++;
+    }
+    printf("THE AVG BYTES 111 IS: %d\n",thread_pnt[0].avgBytes);
+    printf("THE AVG BYTES 222 IS: %d\n",thread_pnt[1].avgBytes);
+    printf("THE AVG BYTES 333 IS: %d\n",thread_pnt[2].avgBytes);
+    printf("THE MINIMUM IS: %d\n",minimum);
+}
+
+/*
+ * The main logic of this program is in this method. The client 
+ * communicates with the server using the send and recv system 
+ * calls. It has two buffers, one for sending messages and one
+ * for recieving messages. This entire method is put under a while
+ * loop to allow the client to continuously send messages to the
+ * server and there is a seperate while loop inside this client
+ * for receiving messages in case the message being sent by the server
+ * will require multiple packets. If there are any problems using
+ * those two system calls, errors are thrown respectively.
+ *
+ * This method will call createServerHelper and connectSocket within
+ * a loop as well.
+ */
+void readWriteSocket(Thread threadInfo){
+    int sendfd;
+    int recfd; //the file descriptor for recieving messages
+    int setBreak = 0; //variable set/unset when wanting to break while loops
+    struct sockaddr_in servaddr; //the server address
+
+
+    int sockfd = createSocket();
+
+    //Create the server with its info below
+    int port;
+    char ipAddr[1024]; //max length of ipaddress - used when opneing file
+    char portNumbr[1024]; //max length of portNumbr - used when opening file
+
+    int countdown = threadInfo.thread_id;
+    while (countdown > 0){
+        fscanf(threadInfo.fp,"%s %s",ipAddr,portNumbr);
+        countdown--;
+    }
+
+    if(fscanf(threadInfo.fp,"%s %s",ipAddr,portNumbr) > 0){
+        printf("%s %s \n",ipAddr,portNumbr);
+        if (strncmp(ipAddr,"localhost",9) == 0){
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr, sizeof(servaddr));
+            servaddr.sin_family = AF_INET;
+            servaddr.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, "127.0.0.1", &servaddr.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }else{   
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr, sizeof(servaddr));
+            servaddr.sin_family = AF_INET;
+            servaddr.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, ipAddr, &servaddr.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }        
+    }
+
+    //connect the the server's socket here
+    if (connect(sockfd, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+
+      //infinite while loop that exits either during an error
+      //or when the client sends an "exit" message
+      while(1){
+            //allows sending a string fiexitfile should be server-info.txt\n");
+        exit(EXIT_FAILURE);
+    }
+    threadInfo.fp = fopen(filename,"r");
+    if (threadInfo.fp == NULL){
+        perror("The file you are trying to open does not exist\n");
+        exit(1);
+    }
+}
+
+
+/*
+ * Finds the next server in list of servers and sets its
+ * variables on the client side
+ */
+void createServerHelper(int sockfd){
+    char ipAddr[1024]; //max length of ipaddress - used when opneing file
+    char portNumbr[1024]; //max length of portNumbr - used when opening file
+    if(fscanf(fp,"%s %s",ipAddr,portNumbr) > 0){
+        printf("%s %s \n",ipAddr,portNumbr);
+        if (strncmp(ipAddr,"localhost",9) == 0)
+            createServer("127.0.0.1",portNumbr);
+        else   
+            createServer(ipAddr,portNumbr);
+            //createServer("127.0.0.1",portNumbr);
+    }
+}
+
+/*
+ * Gets the minimum between the number of the connections the user enters
+ * and the number of servers available for usage
+ */
+void getMin(const char *numConnections, const char *filename, const char* fileOnServer){
+    int tempNumConnections = -1;
+    int tempNumLines = 0;
+    int ch = 0;
+
+    /*
+     * Find number of lines and set numConnections to int
+     */
+    sscanf(numConnections,"%d",&tempNumConnections); //converts connection number to int
+    while(!feof(fp)){
+        ch = fgetc(fp);
+        if (ch == '\n'){
+            tempNumLines++;
+        }
+    }
+    rewind(fp);
+
+    printf("tempNumconnections is: %d tempNumlines is: %d",tempNumConnections,tempNumLines);
+
+    int minimumTemp;
+    //Set the minimum to one of those values
+    if(tempNumLines <= tempNumConnections){
+        minimumTemp = tempNumLines;
+        minimum = tempNumLines;
+    }else{
+        minimumTemp = tempNumConnections;
+        minimum = tempNumConnections;
+    }
+
+    //zero connections = throw error
+    if (minimumTemp == 0){
+        perror("Not enough servers to connect to\n");
+        exit(1);
+    }
+
+    //set minimum in thread struct
+    thread_pnt = (Thread*)malloc(minimumTemp*sizeof(Thread));
+    int minTemp = minimumTemp -1;
+    while(minTemp > -1){
+        thread_pnt[minTemp].minimum = minimumTemp;
+        minTemp--;
+    }
+
+    //set tempVal used for calculation in thread struct   
+    thread_pnt[0].tempVal = 0;
+    minTemp = minimumTemp - 1;
+    while(minTemp > 0){
+        thread_pnt[minTemp].tempVal = 1;
+        minTemp--;
+    }
+
+    //set thread_id in this method
+    int count = 0;
+    minTemp = minimumTemp - 1;
+    while(count <= minTemp){
+        thread_pnt[count].thread_id = count;
+        count++;
+    }
+
+    //set setFile in this method
+    minTemp = minimumTemp - 1;
+    while(minTemp > -1){
+        thread_pnt[minTemp].setFile = 0;
+        minTemp--;
+    }
+
+    //set fp in this piece of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    while(count <= minTemp){
+        if (strncmp(filename,"server-info.txt",15) != 0){
+            perror("The file should be server-info.txt\n");
+            exit(EXIT_FAILURE);
+        }
+        thread_pnt[count].fp = fopen(filename,"r");
+        if (thread_pnt[count].fp == NULL){
+            perror("The file you are trying to open does not exist\n");
+            exit(1);
+        }
+        count++;
+    }
+
+    //set reader file pointer in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    char fileName2[200];
+    while (count <= minTemp){
+        sprintf(fileName2,"myReadingFilez");
+        sprintf(fileName2 + strlen(fileName2), "%d", (long) (count));
+        sprintf(thread_pnt[count].fileOnServer,fileName2); 
+        thread_pnt[count].reader = fopen(fileName2,"a");
+        bzero(fileName2,200);
+        count++;
+    }
+
+    //set counter in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    while(count <= minTemp){
+        thread_pnt[count].counter = count;
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        sprintf(thread_pnt[count].myFileName,fileOnServer);
+        count++;
+    }
+    //thread_pnt[1].thread_id = 5;
+
+}
+
+void getFileSize(const char* fileName){
+
+    int sockfd = createSocke

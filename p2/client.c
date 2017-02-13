@@ -33,7 +33,7 @@ typedef struct{
     char recvline[MAXLINE + 1]; //finished setting
     char sendline[1024]; //finished setting
     int thread_id; //finished setting
-    FILE *reader;
+    FILE *reader; //used to create sep file to put recvbuff into
     FILE *fp; //finished setting
     //char ipAddr[1024]; //unneeded?
     //char portNumbr[1024]; //uneeded?
@@ -44,6 +44,9 @@ typedef struct{
     //struct sockaddr_in servaddr; //the server address ---> may not need
     int tempVal; //finished setting
     int setFile; //finished setting
+    int counter; //finished setting
+    char myFileName[1024];
+    char fileOnServer[200];
 }Thread;
 
 //Thread pointer created -> pointer to an array of structs
@@ -154,7 +157,7 @@ void createServerHelper(int sockfd){
  * Gets the minimum between the number of the connections the user enters
  * and the number of servers available for usage
  */
-void getMin(const char *numConnections, const char *filename){
+void getMin(const char *numConnections, const char *filename, const char* fileOnServer){
     int tempNumConnections = -1;
     int tempNumLines = 0;
     int ch = 0;
@@ -216,7 +219,7 @@ void getMin(const char *numConnections, const char *filename){
     //set setFile in this method
     minTemp = minimumTemp - 1;
     while(minTemp > -1){
-        thread_pnt[minTemp].setFile = 1;
+        thread_pnt[minTemp].setFile = 0;
         minTemp--;
     }
 
@@ -236,6 +239,33 @@ void getMin(const char *numConnections, const char *filename){
         count++;
     }
 
+    //set reader file pointer in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    char fileName2[200];
+    while (count <= minTemp){
+        sprintf(fileName2,"myReadingFilez");
+        sprintf(fileName2 + strlen(fileName2), "%d", (long) (count));
+        sprintf(thread_pnt[count].fileOnServer,fileName2); 
+        thread_pnt[count].reader = fopen(fileName2,"a");
+        bzero(fileName2,200);
+        count++;
+    }
+
+    //set counter in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    while(count <= minTemp){
+        thread_pnt[count].counter = count;
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        sprintf(thread_pnt[count].myFileName,fileOnServer);
+        count++;
+    }
     //thread_pnt[1].thread_id = 5;
 
 }
@@ -337,11 +367,15 @@ void setAvgEtc(){
     thread_pnt[0].avgBytes = avgBytes;
  
     while(count <= minTemp){
-        thread_pnt[minTemp].fileSize = fileSize;
-        thread_pnt[minTemp].remainderBytes = 0;
-        thread_pnt[minTemp].avgBytes = avgBytes;
+        thread_pnt[count].fileSize = fileSize;
+        thread_pnt[count].remainderBytes = 0;
+        thread_pnt[count].avgBytes = avgBytes;
         count++;
     }
+    printf("THE AVG BYTES 111 IS: %d\n",thread_pnt[0].avgBytes);
+    printf("THE AVG BYTES 222 IS: %d\n",thread_pnt[1].avgBytes);
+    printf("THE AVG BYTES 333 IS: %d\n",thread_pnt[2].avgBytes);
+    printf("THE MINIMUM IS: %d\n",minimum);
 }
 
 /*
@@ -358,7 +392,7 @@ void setAvgEtc(){
  * This method will call createServerHelper and connectSocket within
  * a loop as well.
  */
-void readWriteSocket(Thread threadInfo, const char* fileName){
+void readWriteSocket(Thread threadInfo){
     int sendfd;
     int recfd; //the file descriptor for recieving messages
     int setBreak = 0; //variable set/unset when wanting to break while loops
@@ -419,20 +453,26 @@ void readWriteSocket(Thread threadInfo, const char* fileName){
             bzero(threadInfo.sendline,1024);
 
             if (threadInfo.setFile == 0){
-                printf("got into setfile = 0\n");
-                sprintf(threadInfo.sendline,"filename");
-                sprintf(threadInfo.sendline + strlen(threadInfo.sendline),fileName);
-                threadInfo.setFile = 1;
+                printf("got into setFile = 0\n");
+                sprintf(threadInfo.sendline,"openfile");
+                sprintf(threadInfo.sendline + strlen(threadInfo.sendline),threadInfo.myFileName);
+                threadInfo.setFile = 1; 
             }else if (threadInfo.setFile == 1){
                 printf("got into setFile = 1\n");
                 sprintf(threadInfo.sendline,"size");
                 sprintf(threadInfo.sendline + strlen(threadInfo.sendline), "%d", (long) (threadInfo.avgBytes + threadInfo.remainderBytes));
+                printf("the size of the byts is: %d\n",threadInfo.sendline);
                 threadInfo.setFile = 2;
             }else if (threadInfo.setFile == 2){
                 printf("got into setFile = 2\n");
+                printf("the avgBytes is: %d\n",threadInfo.avgBytes);
+                printf("the tempVal is: %d\n",threadInfo.tempVal);
+                printf("the remainderBytes is: %d\n",threadInfo.remainderBytes);
+                printf("the counter is: %d\n",threadInfo.counter);
+                printf("\n\n");
                 sprintf(threadInfo.sendline,"position");
-                sprintf(threadInfo.sendline + strlen(threadInfo.sendline), "%d", (long) (((threadInfo.avgBytes + threadInfo.remainderBytes)*threadInfo.tempVal)  + (threadInfo.avgBytes * threadInfo.thread_id)));
-                threadInfo.tempVal = 1;
+                //sprintf(threadInfo.sendline + strlen(threadInfo.sendline), "%d", (long) (((threadInfo.avgBytes + threadInfo.remainderBytes)*threadInfo.tempVal)  + (threadInfo.avgBytes * threadInfo.counter)));
+                sprintf(threadInfo.sendline + strlen(threadInfo.sendline), "%d", (long) ((threadInfo.avgBytes*threadInfo.counter) + (threadInfo.remainderBytes*threadInfo.tempVal)));
                 threadInfo.setFile = 3;
             }
 
@@ -454,20 +494,16 @@ void readWriteSocket(Thread threadInfo, const char* fileName){
             const char *gotSizeofFile = &threadInfo.recvline[myLength-5];
             const char *last_four = &threadInfo.recvline[myLength-4];	    
 
-            if(strncmp(threadInfo.recvline,"sizeFile",8) == 0){
-                char subBuff[200];
-                memcpy(subBuff, &threadInfo.recvline[8], strlen(threadInfo.recvline));
-                fileSize = atoi(subBuff);
-                avgBytes = fileSize/threadInfo.minimum;
-                remainderBytes = fileSize%threadInfo.minimum;
-                bzero(threadInfo.recvline,MAXLINE);
-                break; 
-            }
-
             if(strncmp(threadInfo.recvline,"needPos",7) == 0){
-                printf("came into needPos: %s\n", threadInfo.recvline);
+                printf("came into needPos exit: %s\n", threadInfo.recvline);
                 break;
             }
+
+            if(strncmp(threadInfo.recvline,"openFile2",8) == 0){
+                printf("came into openFile2 exit: %s\n", threadInfo.recvline);
+                break;
+            }
+
 
                 //if client enters exit, this allows the
                 //client to close its socket and exit
@@ -476,14 +512,14 @@ void readWriteSocket(Thread threadInfo, const char* fileName){
                   int buffLength = strlen(recvline) - 5;
                   printf("%.*s",buffLength,recvline + 0);
                 */
-                 printf("got into exit\n");
-                 close(sockfd);
+                 printf("\ngot into exit\n");
                  setBreak = 1;
                  break;
               }
 
               if(threadInfo.setFile == 3){
-                printf("%s",threadInfo.recvline); //prints data received onto screen
+                fwrite(threadInfo.recvline,1,strlen(threadInfo.recvline),threadInfo.reader); 
+                //printf("%s",threadInfo.recvline); //prints data received onto screen
                 bzero(threadInfo.recvline,MAXLINE); //zero out buffer
               }
 
@@ -512,9 +548,45 @@ void readWriteSocket(Thread threadInfo, const char* fileName){
     //sockfd = createSocket();
 
   fclose(threadInfo.fp); //fclose comes here?
-  close(sockfd);
+  fclose(threadInfo.reader);
+  close(sockfd); //look at above when exit is called. it exits automatically?
   printf("ending of thread method\n");
 }//close method
+
+void combineFiles(){
+    int minTemp = minimum - 1;
+    int count = 0;
+    FILE *myFile;
+    char ch;
+    while(count <= minTemp){
+        thread_pnt[count].reader = fopen(thread_pnt[count].fileOnServer,"r");
+        if (thread_pnt[count].reader == NULL){
+            perror("the file you want to read to is not possible\n");
+            exit(1);
+        }
+        count++; 
+    }
+
+    printf("got to step 1 in combineFiles\n");
+
+    myFile = fopen("resultingFile","a"); 
+    if (myFile == NULL){
+        perror("The file cannot be written to\n");
+        exit(1);
+    }   
+ 
+    count = 0;
+    minTemp = minimum - 1;
+    while(count <= minTemp){
+        printf("in top while loop\n");
+        while( (ch = fgetc(thread_pnt[count].reader)) != EOF){
+            printf("in while loop: %d\n",count);
+            fputc(ch,myFile);
+        }
+        count++; 
+    }
+    printf("got to step 2 of combineFiles\n"); 
+}
 
 /*
  * This is the main for this class which executes the
@@ -525,7 +597,7 @@ main(int argc, char **argv)
 {
     numArgs(argc);
     checkServerFile(argv[1]);
-    getMin(argv[2], argv[1]);
+    getMin(argv[2], argv[1], argv[3]);
     getFileSize(argv[3]);
     setAvgEtc();
     //printf("end of main, size of file read is: %d \n",fileSize);
@@ -538,6 +610,11 @@ main(int argc, char **argv)
     //int sockfd = createSocket();
     //createServer(argv[1],argv[2]);
     //connectSocket(sockfd);
-    readWriteSocket(thread_pnt[0],argv[3]);
+    readWriteSocket(thread_pnt[0]);
+    readWriteSocket(thread_pnt[1]);
+    //readWriteSocket(thread_pnt[2]);
+    //readWriteSocket(thread_pnt[3]);
+    combineFiles();  
+  
     return 0;
 }

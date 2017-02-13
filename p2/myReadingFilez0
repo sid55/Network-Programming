@@ -1,0 +1,128 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>          
+#include <sys/socket.h>
+#include <strings.h>
+#include <unistd.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <string.h>
+
+#define MAXLINE 4096 //size of buffer
+
+/*
+ * NOTE: All these global variables are not being used in the method
+ *       called by pthread_create
+ */
+//CHANGED MAXLINE + 1 to MAXLINE
+char    recvline[MAXLINE], sendline[1024]; //the recieve and send buffers
+struct sockaddr_in servaddr2; //the server address
+
+int minimum; //leave as global->not used with threads
+FILE *fp; //pointer to server list file, leave as global->not used with threads
+
+int fileSize = -1; //size of file that has book
+int remainderBytes = 0; //set as leftover bytes after dividing file size by minimum.
+                        //value is added to only first connection then set to 0
+int avgBytes = 0; //set as average number of bytes to send per connection
+/*
+ * A struct thread that will be used throughout this program to hold info about a thread
+ */
+typedef struct{
+    char recvline[MAXLINE + 1]; //finished setting
+    char sendline[1024]; //finished setting
+    int thread_id; //finished setting
+    FILE *reader; //used to create sep file to put recvbuff into
+    FILE *fp; //finished setting
+    //char ipAddr[1024]; //unneeded?
+    //char portNumbr[1024]; //uneeded?
+    int avgBytes; //finished setting
+    int remainderBytes; //finished setting
+    int minimum; //finished setting
+    int fileSize; //finished setting
+    //struct sockaddr_in servaddr; //the server address ---> may not need
+    int tempVal; //finished setting
+    int setFile; //finished setting
+    int counter; //finished setting
+    char myFileName[1024];
+    char fileOnServer[200];
+}Thread;
+
+//Thread pointer created -> pointer to an array of structs
+Thread *thread_pnt;
+
+/*
+ * This method checks to make sure that the number of 
+ * arguments is not invalid and above 3. It will
+ * throw an error otherwise.
+ */
+void numArgs(int argc){
+    if (argc != 4){
+        perror("usage: a.out <server-info.txt> <num-connections> <filename>\n");
+        exit(EXIT_FAILURE);
+    }
+}
+
+/*
+ * This method creates a socket on the client side so that
+ * the client can interact with the server on this socket.
+ * If a socket cannot be created, an error will be thrown. 
+ * If there is no error, the socket file descriptor 
+ * will be returned.
+ */
+int createSocket(){
+    int sockfdtemp = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfdtemp < 0){
+        perror("socket error\n");
+        exit(1);
+    }
+    return sockfdtemp;
+}
+
+/*
+ * This method gives the server information such as the port
+ * number specified by the user and the ip address. It allows
+ * the client to know information about the server so that the
+ * client can communicate with the server.
+ */
+void createServer(const char *ipaddr, const char *portnum){
+    int port;
+    //if(minimum > 0){
+        sscanf(portnum,"%d",&port);  //port number specified
+        bzero(&servaddr2, sizeof(servaddr2));
+        servaddr2.sin_family = AF_INET;
+        servaddr2.sin_port = htons(port); //port number being set
+    
+        //ip address specified below by the user  
+        if (inet_pton(AF_INET, ipaddr, &servaddr2.sin_addr) <= 0){
+            perror("inet_pton error");
+            exit(1);
+        }
+    //    minimum--;
+    //}else{
+    //    perror("Not enough servers to connect to");
+    //    exit(EXIT_FAILURE);
+    //}
+}
+
+/*
+ * Makes sure that the server file list provided exists and 
+ * that it can be successfully opened.
+ */
+void checkServerFile(const char *filename){
+    if (strncmp(filename,"server-info.txt",15) != 0){
+        perror("The file should be server-info.txt\n");
+        exit(EXIT_FAILURE);
+    }
+    fp = fopen(filename,"r");
+    if (fp == NULL){
+        perror("The file you are trying to open does not exist\n");
+        exit(1);
+    }
+}
+
+//Passing in the filename and the thread object index
+void checkServerFile2(const char *filename, Thread threadInfo){
+    if (strncmp(filename,"server-info.txt",15) != 0){
+        perror("The 
