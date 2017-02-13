@@ -233,20 +233,18 @@ bzero(sendBuff,MAXLINE2);
             printf("the bytesToRead is: %d\n",bytesToRead);
             printf("the bytesRemainder is: %d\n",bytesRemainder);
             printf("the bytesDivisible is: %d\n",bytesDivisible);
-            int temp = 0;
-            while(temp <= bytesDivisible){
+            while(bytesDivisible >= 0){
                 bzero(sendBuff,MAXLINE2);
-                if(temp == 0){
+                if(bytesDivisible == 0){
                     printf("\n\n\n\ncame into first time\n");
-                    fseek(fileRead,position,SEEK_SET);
                     newLen = fread(sendBuff,sizeof(char),bytesRemainder,fileRead);
-                    fseek(fileRead,position + bytesRemainder,SEEK_SET);
                     printf("the newLen is: %d\n",newLen);
+                    fseek(fileRead,bytesRemainder,SEEK_SET);
                     printf("able to do fseek first time\n\n\n\n"); 
                 }else{
                     printf("\n\n\n\ncame into second time\n");
-                    fseek(fileRead,position + bytesRemainder + ((bytesDivisible - 1) * MAXLINE2),SEEK_SET);
                     newLen = fread(sendBuff,sizeof(char),MAXLINE2,fileRead);
+                    fseek(fileRead,MAXLINE2,SEEK_SET);
                     printf("able to do fseek second time\n\n\n\n");
                 }
                 if ((writefd = write(connfd, sendBuff, strlen(sendBuff))) > 0) {
@@ -273,7 +271,7 @@ bzero(sendBuff,MAXLINE2);
                 }
      
                 bzero(sendBuff,MAXLINE2);
-                temp++;
+                bytesDivisible--;
             }
             printf("333333333333333333333333333\n");
             fclose(fileRead); //fclose here?

@@ -16,7 +16,7 @@
  *       called by pthread_create
  */
 //CHANGED MAXLINE + 1 to MAXLINE
-char    recvline[MAXLINE], sendline[1024]; //the recieve and send buffers
+char    recvline[MAXLINE + 1], sendline[1024]; //the recieve and send buffers
 struct sockaddr_in servaddr2; //the server address
 
 int minimum; //leave as global->not used with threads
@@ -47,6 +47,7 @@ typedef struct{
     int counter; //finished setting
     char myFileName[1024];
     char fileOnServer[200];
+    char currentLoc;
 }Thread;
 
 //Thread pointer created -> pointer to an array of structs
@@ -266,6 +267,13 @@ void getMin(const char *numConnections, const char *filename, const char* fileOn
         sprintf(thread_pnt[count].myFileName,fileOnServer);
         count++;
     }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        thread_pnt[count].currentLoc = 0;
+        count++;
+    }
     //thread_pnt[1].thread_id = 5;
 
 }
@@ -459,12 +467,14 @@ void readWriteSocket(Thread threadInfo){
                 threadInfo.setFile = 1; 
             }else if (threadInfo.setFile == 1){
                 printf("got into setFile = 1\n");
+                bzero(threadInfo.sendline,1024);
                 sprintf(threadInfo.sendline,"size");
-                sprintf(threadInfo.sendline + strlen(threadInfo.sendline), "%d", (long) (threadInfo.avgBytes + threadInfo.remainderBytes));
-                printf("the size of the byts is: %d\n",threadInfo.sendline);
+                sprintf(threadInfo.sendline + strlen(threadInfo.sendline), "%d", (threadInfo.avgBytes + threadInfo.remainderBytes));
+                printf("the size of the byts is: %s\n",threadInfo.sendline);
                 threadInfo.setFile = 2;
             }else if (threadInfo.setFile == 2){
                 printf("got into setFile = 2\n");
+                printf("the sendline is: %s\n",threadInfo.sendline);
                 printf("the avgBytes is: %d\n",threadInfo.avgBytes);
                 printf("the tempVal is: %d\n",threadInfo.tempVal);
                 printf("the remainderBytes is: %d\n",threadInfo.remainderBytes);
@@ -518,9 +528,25 @@ void readWriteSocket(Thread threadInfo){
               }
 
               if(threadInfo.setFile == 3){
-                fwrite(threadInfo.recvline,1,strlen(threadInfo.recvline),threadInfo.reader); 
+                printf("\n\n\n\nSEPERATE lenth: %d\n\n\n\n",strlen(threadInfo.recvline));
+                printf("----------------------------received buffer is: %s\n",threadInfo.recvline);
+                if(threadInfo.recvline[strlen(threadInfo.recvline) - 1690] == '\0'){
+                    printf("last character is null\n");
+                }else{
+                    if(threadInfo.recvline[strlen(threadInfo.recvline) - 1690] == ' '){
+                        printf("character is white space\n");
+                        printf("num is: %d\n", (int) threadInfo.recvline[strlen(threadInfo.recvline) - 1690]); 
+                    }else{
+                        printf("the char val for apos space is: %d\n",(int) ' ');
+                        printf("character next to last: %d\n", (int) threadInfo.recvline[strlen(threadInfo.recvline)-1690]);
+                    }
+                }  
+                threadInfo.currentLoc = threadInfo.currentLoc + strlen(threadInfo.recvline);
+                fseek(threadInfo.reader, threadInfo.currentLoc,SEEK_SET); 
+                int val = fwrite(threadInfo.recvline,1,strlen(threadInfo.recvline),threadInfo.reader); 
                 //printf("%s",threadInfo.recvline); //prints data received onto screen
                 bzero(threadInfo.recvline,MAXLINE); //zero out buffer
+                printf("\n\n\n\nEND written: %d\n\n\n\n",val);
               }
 
             }
@@ -578,9 +604,7 @@ void combineFiles(){
     count = 0;
     minTemp = minimum - 1;
     while(count <= minTemp){
-        printf("in top while loop\n");
         while( (ch = fgetc(thread_pnt[count].reader)) != EOF){
-            printf("in while loop: %d\n",count);
             fputc(ch,myFile);
         }
         count++; 
