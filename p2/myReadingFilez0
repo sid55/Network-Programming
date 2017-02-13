@@ -119,6 +119,7 @@ void readWriteServer(int connfd, int listenfd){
 int bytesToRead;
 int position;
 int sendfd;
+int setForExit;
 bzero(recvBuff,MAXLINE2);
 bzero(sendBuff,MAXLINE2);
   while( (read_size = recv(connfd , recvBuff , MAXLINE2 , 0)) > 0 )
@@ -172,4 +173,10 @@ bzero(sendBuff,MAXLINE2);
               fileRead = fopen(subBuff5,"r");
               if (fileRead == NULL){
                   perror("The file you are trying to read does not exist\n");
- 
+                  exit(1);
+              }
+
+              bzero(sendBuff,MAXLINE2);
+              sprintf(sendBuff,"openFile2");
+              sendfd = write(connfd, sendBuff, strlen(sendBuff));
+              if(sendfd < 0){

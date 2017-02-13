@@ -554,6 +554,7 @@ void readWriteSocket(Thread threadInfo){
             //printf("THE rec fd is:%d \n", recfd); 
      
             if (setBreak == 1){
+                printf("gets into setBreak\n");
                 setBreak = 0;
                 break;
             }
@@ -564,8 +565,9 @@ void readWriteSocket(Thread threadInfo){
                exit(1); 
             }
             if (recfd == 0){
-               perror("recfd is equal to zero");
-               exit(1);
+               //perror("recfd is equal to zero");
+               //exit(1);
+               break;
             }
 
             bzero(threadInfo.recvline,MAXLINE); //the recieving buffer is reset/zeroed
@@ -636,7 +638,7 @@ main(int argc, char **argv)
     //connectSocket(sockfd);
     readWriteSocket(thread_pnt[0]);
     readWriteSocket(thread_pnt[1]);
-    //readWriteSocket(thread_pnt[2]);
+    readWriteSocket(thread_pnt[2]);
     //readWriteSocket(thread_pnt[3]);
     combineFiles();  
   
