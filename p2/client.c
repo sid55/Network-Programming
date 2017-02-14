@@ -176,8 +176,6 @@ void getMinAndSetStruct(const char *numConnections, const char *filename, const 
     }
     rewind(fp);
 
-    printf("tempNumconnections is: %d tempNumlines is: %d",tempNumConnections,tempNumLines);
-
     int minimumTemp;
     //Set the minimum to one of those values
     if(tempNumLines <= tempNumConnections){
@@ -284,6 +282,7 @@ void getMinAndSetStruct(const char *numConnections, const char *filename, const 
 
 void getFileSize(const char* fileName){
 
+while(1){
     int sockfd = createSocket();
     int recfd;
 
@@ -316,6 +315,9 @@ void getFileSize(const char* fileName){
                 exit(1);
             }
         }        
+    }else{
+        perror("The file is not able to be opened\n");
+        exit(1);
     }
 
 
@@ -334,7 +336,7 @@ void getFileSize(const char* fileName){
         exit(1);     
     } 
 
-
+    int bigExit = 0;
     while( (recfd = recv(sockfd , recvline , MAXLINE , 0)) > 0)
     {
 
@@ -345,12 +347,25 @@ void getFileSize(const char* fileName){
             avgBytes = fileSize/minimum;
             remainderBytes = fileSize%minimum;
             bzero(recvline,MAXLINE);
+            bigExit = 1;
             break; 
         }
+        if(strncmp(recvline,"errorFile",9) == 0){
+            bzero(recvline,MAXLINE);
+            perror("The file is not able to be opened\n");  
+            break; 
+        }
+
+    
     }
 
+    if(bigExit == 1){
+        close(sockfd);
+        break;
+    }
     close(sockfd);
-    rewind(fp);
+  }
+  rewind(fp);
 }
 
 /*
@@ -404,6 +419,7 @@ void setAvgEtc(){
  * a loop as well.
  */
 void *readWriteSocket(void *threadInfoTemp){
+    printf("Gets into this main thread method\n");
     Thread *threadInfo = (Thread *)threadInfoTemp;
     int sendfd;
     int recfd; //the file descriptor for recieving messages
@@ -645,6 +661,19 @@ void createMyThreads(){
 }
 
 /*
+ * This method cleans up by removing the files I have created during this 
+ * program's execution
+ */
+void cleanUp(){
+    int temp = 0;
+    int minT = minimum - 1;
+    while(temp <= minT){
+        remove(thread_pnt[temp].fileOnServer);
+        temp++;
+    }
+}
+
+/*
  * This is the main for this class which executes the
  * methods of the client
  */
@@ -669,6 +698,6 @@ main(int argc, char **argv)
     //connectSocket(sockfd);
     createMyThreads();
     combineFiles();  
-  
+    cleanUp(); 
     return 0;
 }

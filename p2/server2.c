@@ -148,24 +148,33 @@ printf("got here with no prob\n");
               fileRead = fopen(subBuff,"r");
               if (fileRead == NULL){
                   perror("The file you are trying to read does not exist\n");
-                  exit(1);
-              }
-
-              /*
-               * Size of file being read set in global variable
-               */
-              fseek(fileRead,0L,SEEK_END);
-              int fileSize = ftell(fileRead);
-              rewind(fileRead);
+                  sprintf(sendBuff,"errorFile");
+                  sendfd = write(connfd, sendBuff, strlen(sendBuff));
+                  if(sendfd < 0){
+                    perror("send error");
+                    exit(1);
+                  }
+                  setForExit = 1;
+                  break; 
+              }else{
+                  /*
+                   * Size of file being read set in global variable
+                   */
+                  fseek(fileRead,0L,SEEK_END);
+                  int fileSize = ftell(fileRead);
+                  rewind(fileRead);
+            
+                  bzero(recvBuff,MAXLINE2);
         
-              bzero(recvBuff,MAXLINE2);
-    
-              sprintf(sendBuff,"sizeFile");
-              sprintf(sendBuff + strlen(sendBuff),"%d",(long)fileSize); 
-              sendfd = write(connfd, sendBuff, strlen(sendBuff));
-              if(sendfd < 0){
-                perror("send error");
-                exit(1);
+                  sprintf(sendBuff,"sizeFile");
+                  sprintf(sendBuff + strlen(sendBuff),"%d",(long)fileSize);
+                  printf("the sendBuff is: %s\n",sendBuff); 
+                  sendfd = write(connfd, sendBuff, strlen(sendBuff));
+                  if(sendfd < 0){
+                    perror("send error");
+                    exit(1);
+                  }
+                  printf("the sendid is: %d\n",sendfd);
               }
               fclose(fileRead);
               bzero(sendBuff,MAXLINE2); 
