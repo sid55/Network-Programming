@@ -238,29 +238,31 @@ printf("got here with no prob\n");
             bzero(recvBuff,MAXLINE2);
             bytesDivisible = bytesToRead/MAXLINE2;
             bytesRemainder = bytesToRead%MAXLINE2;
-            printf("11111111111111111111111111\n");
+            printf("\n\n\n11111111111111111111111111\n\n\n");
             printf("the bytesToRead is: %d\n",bytesToRead);
             printf("the bytesRemainder is: %d\n",bytesRemainder);
             printf("the bytesDivisible is: %d\n",bytesDivisible);
+            printf("the position is: %d\n",position);
             int temp = 0;
             while(temp <= bytesDivisible){
                 bzero(sendBuff,MAXLINE2);
                 if(temp == 0){
-                    printf("\n\n\n\ncame into first time\n");
+                    printf("came into temp==0\n");
                     fseek(fileRead,position,SEEK_SET);
                     newLen = fread(sendBuff,sizeof(char),bytesRemainder,fileRead);
                     fseek(fileRead,position + bytesRemainder,SEEK_SET);
                     printf("the newLen is: %d\n",newLen);
-                    printf("able to do fseek first time\n\n\n\n");
+                    printf("able to do fseek first time to: %d\n", position + bytesRemainder);
                     if (temp == bytesDivisible){
                         printf("came into here early!!\n");
                         setForExit = 1;
-                    } 
+                    }
                 }else{
-                    printf("\n\n\n\ncame into second time\n");
-                    fseek(fileRead,position + bytesRemainder + ((bytesDivisible - 1) * MAXLINE2),SEEK_SET);
+                    printf("came into temp!=0\n");
+                    fseek(fileRead,position + bytesRemainder + ((temp - 1) * MAXLINE2),SEEK_SET);
                     newLen = fread(sendBuff,sizeof(char),MAXLINE2,fileRead);
-                    printf("able to do fseek second time\n\n\n\n");
+                    printf("the newlen2 is: %d\n",newLen);
+                    printf("able to do fseek second time to: %d\n", position + bytesRemainder + ((temp - 1)*MAXLINE2));
                     if (temp == bytesDivisible){
                         printf("came into here early!!\n");
                         setForExit = 1;
@@ -268,7 +270,7 @@ printf("got here with no prob\n");
                 }
                 if ((writefd = write(connfd, sendBuff, strlen(sendBuff))) > 0) {
                     //sendBuff[strlen(sendBuff)] = '\0';
-                    printf("PRINT: %s\n", sendBuff);
+                    //printf("PRINT: %s\n", sendBuff);
                     printf("\n\n\nstuck here?\n\n\n");
                     bzero(sendBuff,MAXLINE2);
                 }
@@ -293,6 +295,7 @@ printf("got here with no prob\n");
                 temp++;
             }
             printf("333333333333333333333333333\n");
+            printf("recvBuff size is: %d\n",(int)strlen(recvBuff));
             fclose(fileRead); //fclose here?
 
               bzero(sendBuff,MAXLINE2);

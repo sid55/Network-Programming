@@ -375,18 +375,17 @@ void setAvgEtc(){
     //printf("fileSize is: %d",fileSize);
 
     thread_pnt[0].fileSize = fileSize;
-    thread_pnt[0].remainderBytes = remainderBytes;
-    thread_pnt[0].avgBytes = avgBytes;
- 
+    //subtracted minimum -1 for indexing position at right place
+    thread_pnt[0].remainderBytes = remainderBytes - (minimum - 1);
+    thread_pnt[0].avgBytes = avgBytes + (minimum - 1);
+
+    //added minimem -1 for lost bytes 
     while(count <= minTemp){
         thread_pnt[count].fileSize = fileSize;
         thread_pnt[count].remainderBytes = 0;
-        thread_pnt[count].avgBytes = avgBytes;
+        thread_pnt[count].avgBytes = avgBytes + (minimum - 1);
         count++;
     }
-    printf("THE AVG BYTES 111 IS: %d\n",thread_pnt[0].avgBytes);
-    printf("THE AVG BYTES 222 IS: %d\n",thread_pnt[1].avgBytes);
-    printf("THE AVG BYTES 333 IS: %d\n",thread_pnt[2].avgBytes);
     printf("THE MINIMUM IS: %d\n",minimum);
 }
 
@@ -504,7 +503,7 @@ void *readWriteSocket(void *threadInfoTemp){
             //sending its messages to the client            
             while( (recfd = recv(sockfd , threadInfo->recvline , MAXLINE , 0)) > 0)
             {
-
+            printf("GETS INTO WHILE READ\n");
             int myLength = strlen(threadInfo->recvline);
             const char *gotSizeofFile = &threadInfo->recvline[myLength-5];
             const char *last_four = &threadInfo->recvline[myLength-4];	    
@@ -527,7 +526,7 @@ void *readWriteSocket(void *threadInfoTemp){
                   int buffLength = strlen(recvline) - 5;
                   printf("%.*s",buffLength,recvline + 0);
                 */
-                 printf("\ngot into exit\n");
+                 printf("\n\n\n\n\n\n\n\n--------------------------------------------------------------------------\n\n\n\n\n\n\\n");
                  setBreak = 1;
                  break;
               }
@@ -556,7 +555,8 @@ void *readWriteSocket(void *threadInfoTemp){
 
             }
         
-            //printf("THE rec fd is:%d \n", recfd); 
+            printf("111111111111111111111111111111111111111111111111111111111111111111111111\n");
+            printf("THE rec fd is:%d \n", recfd); 
      
             if (setBreak == 1){
                 printf("gets into setBreak\n");
