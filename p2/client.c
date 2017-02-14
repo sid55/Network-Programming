@@ -17,7 +17,7 @@
  *       called by pthread_create
  */
 //CHANGED MAXLINE + 1 to MAXLINE
-char    recvline[MAXLINE + 1], sendline[1024]; //the recieve and send buffers
+char    recvline[MAXLINE], sendline[1024]; //the recieve and send buffers
 struct sockaddr_in servaddr2; //the server address
 
 int minimum; //leave as global->not used with threads
@@ -652,8 +652,6 @@ int
 main(int argc, char **argv)
 {
 
-    pthread_t thread0, thread1, thread2; 
-   
     numArgs(argc);
     checkServerFile(argv[1]);
     getMinAndSetStruct(argv[2], argv[1], argv[3]);

@@ -99,4 +99,5095 @@ int acceptServer(int listenfd){
         printf("connfd before is: %d\n",connfd);
         connfd = accept(listenfd, (struct sockaddr *) NULL, NULL);
         if (connfd < 0){
-            perror("accept
+            perror("accept#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>          
+#include <sys/socket.h>
+#include <strings.h>
+#include <unistd.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <string.h>
+#include <pthread.h>
+
+#define MAXLINE 4096 //size of buffer
+
+/*
+ * NOTE: All these global variables are not being used in the method
+ *       called by pthread_create
+ */
+//CHANGED MAXLINE + 1 to MAXLINE
+char    recvline[MAXLINE + 1], sendline[1024]; //the recieve and send buffers
+struct sockaddr_in servaddr2; //the server address
+
+int minimum; //leave as global->not used with threads
+FILE *fp; //pointer to server list file, leave as global->not used with threads
+
+int fileSize = -1; //size of file that has book
+int remainderBytes = 0; //set as leftover bytes after dividing file size by minimum.
+                        //value is added to only first connection then set to 0
+int avgBytes = 0; //set as average number of bytes to send per connection
+/*
+ * A struct thread that will be used throughout this program to hold info about a thread
+ */
+typedef struct{
+    char recvline[MAXLINE + 1]; //finished setting
+    char sendline[1024]; //finished setting
+    int thread_id; //finished setting
+    FILE *reader; //used to create sep file to put recvbuff into
+    FILE *fp; //finished setting
+    //char ipAddr[1024]; //unneeded?
+    //char portNumbr[1024]; //uneeded?
+    int avgBytes; //finished setting
+    int remainderBytes; //finished setting
+    int minimum; //finished setting
+    int fileSize; //finished setting
+    //struct sockaddr_in servaddr; //the server address ---> may not need
+    int tempVal; //finished setting
+    int setFile; //finished setting
+    int counter; //finished setting
+    char myFileName[1024];
+    char fileOnServer[200];
+    char currentLoc;
+}Thread;
+
+//Thread pointer created -> pointer to an array of structs
+Thread *thread_pnt;
+pthread_t *thread_pnt2;
+/*
+ * This method checks to make sure that the number of 
+ * arguments is not invalid and above 3. It will
+ * throw an error otherwise.
+ */
+void numArgs(int argc){
+    if (argc != 4){
+        perror("usage: a.out <server-info.txt> <num-connections> <filename>\n");
+        exit(EXIT_FAILURE);
+    }
+}
+
+/*
+ * This method creates a socket on the client side so that
+ * the client can interact with the server on this socket.
+ * If a socket cannot be created, an error will be thrown. 
+ * If there is no error, the socket file descriptor 
+ * will be returned.
+ */
+int createSocket(){
+    int sockfdtemp = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfdtemp < 0){
+        perror("socket error\n");
+        exit(1);
+    }
+    return sockfdtemp;
+}
+
+/*
+ * This method gives the server information such as the port
+ * number specified by the user and the ip address. It allows
+ * the client to know information about the server so that the
+ * client can communicate with the server.
+ */
+void createServer(const char *ipaddr, const char *portnum){
+    int port;
+    //if(minimum > 0){
+        sscanf(portnum,"%d",&port);  //port number specified
+        bzero(&servaddr2, sizeof(servaddr2));
+        servaddr2.sin_family =hould be server-info.txt\n");
+            exit(EXIT_FAILURE);
+        }
+        thread_pnt[count].fp = fopen(filename,"r");
+        if (thread_pnt[count].fp == NULL){
+            perror("The file you are trying to open does not exist\n");
+            exit(1);
+        }
+        count++;
+    }
+
+    //set reader file pointer in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    char fileName2[200];
+    while (count <= minTemp){
+        sprintf(fileName2,"myReadingFilez");
+        sprintf(fileName2 + strlen(fileName2), "%d", (long) (count));
+        sprintf(thread_pnt[count].fileOnServer,fileName2); 
+        thread_pnt[count].reader = fopen(fileName2,"a");
+        bzero(fileName2,200);
+        count++;
+    }
+
+    //set counter in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    while(count <= minTemp){
+        thread_pnt[count].counter = count;
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        sprintf(thread_pnt[count].myFileName,fileOnServer);
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        thread_pnt[count].currentLoc = 0;
+        count++;
+    }
+    //thread_pnt[1].thread_id = 5;
+
+}
+
+void getFileSize(const char* fileName){
+
+    int sockfd = createSocket();
+    int recfd;
+
+    //Create the server with its info below
+    int port;
+    char ipAddr[1024]; //max length of ipaddress - used when opneing file
+    char portNumbr[1024]; //max length of portNumbr - used when opening file
+    if(fscanf(fp,"%s %s",ipAddr,portNumbr) > 0){
+        printf("%s %s \n",ipAddr,portNumbr);
+        if (strncmp(ipAddr,"localhost",9) == 0){
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, "127.0.0.1", &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }else{   
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, ipAddr, &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }        
+    }
+
+
+    //connect the the server's socket here
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+
+    sprintf(sendline,"filename");
+    sprintf(sendline + strlen(sendline),fileName);
+
+    if( send(sockfd , sendline , strlen(sendline) , 0) < 0)
+    {
+        perror("Send failed\n");
+        exit(1);     
+    } 
+
+
+    while( (recfd = recv(sockfd , recvline , MAXLINE , 0)) > 0)
+    {
+
+        if(strncmp(recvline,"sizeFile",8) == 0){
+            char subBuff[200];
+            memcpy(subBuff, &recvline[8], strlen(recvline));
+            fileSize = atoi(subBuff);
+            avgBytes = fileSize/minimum;
+            remainderBytes = fileSize%minimum;
+            bzero(recvline,MAXLINE);
+            break; 
+        }
+    }
+
+    close(sockfd);
+    rewind(fp);
+}
+
+/*
+ * This method actually tries to connect the client with the server
+ * by using the connect system call.
+ */ 
+void connectSocket(int sockfd){      
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+}
+
+/*
+ * Sets avg, total, and remainder in thread_ptr
+ */
+void setAvgEtc(){
+    int count = 1;
+    int minTemp = minimum - 1;
+    //can check avgbytes etc info here
+    //printf("avgBytes is: %d",avgBytes);
+    //printf("fileSize is: %d",fileSize);
+
+    thread_pnt[0].fileSize = fileSize;
+    thread_pnt[0].remainderBytes = remaindhould be server-info.txt\n");
+            exit(EXIT_FAILURE);
+        }
+        thread_pnt[count].fp = fopen(filename,"r");
+        if (thread_pnt[count].fp == NULL){
+            perror("The file you are trying to open does not exist\n");
+            exit(1);
+        }
+        count++;
+    }
+
+    //set reader file pointer in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    char fileName2[200];
+    while (count <= minTemp){
+        sprintf(fileName2,"myReadingFilez");
+        sprintf(fileName2 + strlen(fileName2), "%d", (long) (count));
+        sprintf(thread_pnt[count].fileOnServer,fileName2); 
+        thread_pnt[count].reader = fopen(fileName2,"a");
+        bzero(fileName2,200);
+        count++;
+    }
+
+    //set counter in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    while(count <= minTemp){
+        thread_pnt[count].counter = count;
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        sprintf(thread_pnt[count].myFileName,fileOnServer);
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        thread_pnt[count].currentLoc = 0;
+        count++;
+    }
+    //thread_pnt[1].thread_id = 5;
+
+}
+
+void getFileSize(const char* fileName){
+
+    int sockfd = createSocket();
+    int recfd;
+
+    //Create the server with its info below
+    int port;
+    char ipAddr[1024]; //max length of ipaddress - used when opneing file
+    char portNumbr[1024]; //max length of portNumbr - used when opening file
+    if(fscanf(fp,"%s %s",ipAddr,portNumbr) > 0){
+        printf("%s %s \n",ipAddr,portNumbr);
+        if (strncmp(ipAddr,"localhost",9) == 0){
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, "127.0.0.1", &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }else{   
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, ipAddr, &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }        
+    }
+
+
+    //connect the the server's socket here
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+
+    sprintf(sendline,"filename");
+    sprintf(sendline + strlen(sendline),fileName);
+
+    if( send(sockfd , sendline , strlen(sendline) , 0) < 0)
+    {
+        perror("Send failed\n");
+        exit(1);     
+    } 
+
+
+    while( (recfd = recv(sockfd , recvline , MAXLINE , 0)) > 0)
+    {
+
+        if(strncmp(recvline,"sizeFile",8) == 0){
+            char subBuff[200];
+            memcpy(subBuff, &recvline[8], strlen(recvline));
+            fileSize = atoi(subBuff);
+            avgBytes = fileSize/minimum;
+            remainderBytes = fileSize%minimum;
+            bzero(recvline,MAXLINE);
+            break; 
+        }
+    }
+
+    close(sockfd);
+    rewind(fp);
+}
+
+/*
+ * This method actually tries to connect the client with the server
+ * by using the connect system call.
+ */ 
+void connectSocket(int sockfd){      
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+}
+
+/*
+ * Sets avg, total, and remainder in thread_ptr
+ */
+void setAvgEtc(){
+    int count = 1;
+    int minTemp = minimum - 1;
+    //can check avgbytes etc info here
+    //printf("avgBytes is: %d",avgBytes);
+    //printf("fileSize is: %d",fileSize);
+
+    thread_pnt[0].fileSize = fileSize;
+    thread_pnt[0].remainderBytes = remaind#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>          
+#include <sys/socket.h>
+#include <strings.h>
+#include <unistd.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <string.h>
+#include <pthread.h>
+
+#define MAXLINE 4096 //size of buffer
+
+/*
+ * NOTE: All these global variables are not being used in the method
+ *       called by pthread_create
+ */
+//CHANGED MAXLINE + 1 to MAXLINE
+char    recvline[MAXLINE + 1], sendline[1024]; //the recieve and send buffers
+struct sockaddr_in servaddr2; //the server address
+
+int minimum; //leave as global->not used with threads
+FILE *fp; //pointer to server list file, leave as global->not used with threads
+
+int fileSize = -1; //size of file that has book
+int remainderBytes = 0; //set as leftover bytes after dividing file size by minimum.
+                        //value is added to only first connection then set to 0
+int avgBytes = 0; //set as average number of bytes to send per connection
+/*
+ * A struct thread that will be used throughout this program to hold info about a thread
+ */
+typedef struct{
+    char recvline[MAXLINE + 1]; //finished setting
+    char sendline[1024]; //finished setting
+    int thread_id; //finished setting
+    FILE *reader; //used to create sep file to put recvbuff into
+    FILE *fp; //finished setting
+    //char ipAddr[1024]; //unneeded?
+    //char portNumbr[1024]; //uneeded?
+    int avgBytes; //finished setting
+    int remainderBytes; //finished setting
+    int minimum; //finished setting
+    int fileSize; //finished setting
+    //struct sockaddr_in servaddr; //the server address ---> may not need
+    int tempVal; //finished setting
+    int setFile; //finished setting
+    int counter; //finished setting
+    char myFileName[1024];
+    char fileOnServer[200];
+    char currentLoc;
+}Thread;
+
+//Thread pointer created -> pointer to an array of structs
+Thread *thread_pnt;
+pthread_t *thread_pnt2;
+/*
+ * This method checks to make sure that the number of 
+ * arguments is not invalid and above 3. It will
+ * throw an error otherwise.
+ */
+void numArgs(int argc){
+    if (argc != 4){
+        perror("usage: a.out <server-info.txt> <num-connections> <filename>\n");
+        exit(EXIT_FAILURE);
+    }
+}
+
+/*
+ * This method creates a socket on the client side so that
+ * the client can interact with the server on this socket.
+ * If a socket cannot be created, an error will be thrown. 
+ * If there is no error, the socket file descriptor 
+ * will be returned.
+ */
+int createSocket(){
+    int sockfdtemp = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfdtemp < 0){
+        perror("socket error\n");
+        exit(1);
+    }
+    return sockfdtemp;
+}
+
+/*
+ * This method gives the server information such as the port
+ * number specified by the user and the ip address. It allows
+ * the client to know information about the server so that the
+ * client can communicate with the server.
+ */
+void createServer(const char *ipaddr, const char *portnum){
+    int port;
+    //if(minimum > 0){
+        sscanf(portnum,"%d",&port);  //port number specified
+        bzero(&servaddr2, sizeof(servaddr2));
+        servaddr2.sin_family =hould be server-info.txt\n");
+            exit(EXIT_FAILURE);
+        }
+        thread_pnt[count].fp = fopen(filename,"r");
+        if (thread_pnt[count].fp == NULL){
+            perror("The file you are trying to open does not exist\n");
+            exit(1);
+        }
+        count++;
+    }
+
+    //set reader file pointer in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    char fileName2[200];
+    while (count <= minTemp){
+        sprintf(fileName2,"myReadingFilez");
+        sprintf(fileName2 + strlen(fileName2), "%d", (long) (count));
+        sprintf(thread_pnt[count].fileOnServer,fileName2); 
+        thread_pnt[count].reader = fopen(fileName2,"a");
+        bzero(fileName2,200);
+        count++;
+    }
+
+    //set counter in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    while(count <= minTemp){
+        thread_pnt[count].counter = count;
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        sprintf(thread_pnt[count].myFileName,fileOnServer);
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        thread_pnt[count].currentLoc = 0;
+        count++;
+    }
+    //thread_pnt[1].thread_id = 5;
+
+}
+
+void getFileSize(const char* fileName){
+
+    int sockfd = createSocket();
+    int recfd;
+
+    //Create the server with its info below
+    int port;
+    char ipAddr[1024]; //max length of ipaddress - used when opneing file
+    char portNumbr[1024]; //max length of portNumbr - used when opening file
+    if(fscanf(fp,"%s %s",ipAddr,portNumbr) > 0){
+        printf("%s %s \n",ipAddr,portNumbr);
+        if (strncmp(ipAddr,"localhost",9) == 0){
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, "127.0.0.1", &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }else{   
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, ipAddr, &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }        
+    }
+
+
+    //connect the the server's socket here
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+
+    sprintf(sendline,"filename");
+    sprintf(sendline + strlen(sendline),fileName);
+
+    if( send(sockfd , sendline , strlen(sendline) , 0) < 0)
+    {
+        perror("Send failed\n");
+        exit(1);     
+    } 
+
+
+    while( (recfd = recv(sockfd , recvline , MAXLINE , 0)) > 0)
+    {
+
+        if(strncmp(recvline,"sizeFile",8) == 0){
+            char subBuff[200];
+            memcpy(subBuff, &recvline[8], strlen(recvline));
+            fileSize = atoi(subBuff);
+            avgBytes = fileSize/minimum;
+            remainderBytes = fileSize%minimum;
+            bzero(recvline,MAXLINE);
+            break; 
+        }
+    }
+
+    close(sockfd);
+    rewind(fp);
+}
+
+/*
+ * This method actually tries to connect the client with the server
+ * by using the connect system call.
+ */ 
+void connectSocket(int sockfd){      
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+}
+
+/*
+ * Sets avg, total, and remainder in thread_ptr
+ */
+void setAvgEtc(){
+    int count = 1;
+    int minTemp = minimum - 1;
+    //can check avgbytes etc info here
+    //printf("avgBytes is: %d",avgBytes);
+    //printf("fileSize is: %d",fileSize);
+
+    thread_pnt[0].fileSize = fileSize;
+    thread_pnt[0].remainderBytes = remaindhould be server-info.txt\n");
+            exit(EXIT_FAILURE);
+        }
+        thread_pnt[count].fp = fopen(filename,"r");
+        if (thread_pnt[count].fp == NULL){
+            perror("The file you are trying to open does not exist\n");
+            exit(1);
+        }
+        count++;
+    }
+
+    //set reader file pointer in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    char fileName2[200];
+    while (count <= minTemp){
+        sprintf(fileName2,"myReadingFilez");
+        sprintf(fileName2 + strlen(fileName2), "%d", (long) (count));
+        sprintf(thread_pnt[count].fileOnServer,fileName2); 
+        thread_pnt[count].reader = fopen(fileName2,"a");
+        bzero(fileName2,200);
+        count++;
+    }
+
+    //set counter in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    while(count <= minTemp){
+        thread_pnt[count].counter = count;
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        sprintf(thread_pnt[count].myFileName,fileOnServer);
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        thread_pnt[count].currentLoc = 0;
+        count++;
+    }
+    //thread_pnt[1].thread_id = 5;
+
+}
+
+void getFileSize(const char* fileName){
+
+    int sockfd = createSocket();
+    int recfd;
+
+    //Create the server with its info below
+    int port;
+    char ipAddr[1024]; //max length of ipaddress - used when opneing file
+    char portNumbr[1024]; //max length of portNumbr - used when opening file
+    if(fscanf(fp,"%s %s",ipAddr,portNumbr) > 0){
+        printf("%s %s \n",ipAddr,portNumbr);
+        if (strncmp(ipAddr,"localhost",9) == 0){
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, "127.0.0.1", &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }else{   
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, ipAddr, &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }        
+    }
+
+
+    //connect the the server's socket here
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+
+    sprintf(sendline,"filename");
+    sprintf(sendline + strlen(sendline),fileName);
+
+    if( send(sockfd , sendline , strlen(sendline) , 0) < 0)
+    {
+        perror("Send failed\n");
+        exit(1);     
+    } 
+
+
+    while( (recfd = recv(sockfd , recvline , MAXLINE , 0)) > 0)
+    {
+
+        if(strncmp(recvline,"sizeFile",8) == 0){
+            char subBuff[200];
+            memcpy(subBuff, &recvline[8], strlen(recvline));
+            fileSize = atoi(subBuff);
+            avgBytes = fileSize/minimum;
+            remainderBytes = fileSize%minimum;
+            bzero(recvline,MAXLINE);
+            break; 
+        }
+    }
+
+    close(sockfd);
+    rewind(fp);
+}
+
+/*
+ * This method actually tries to connect the client with the server
+ * by using the connect system call.
+ */ 
+void connectSocket(int sockfd){      
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+}
+
+/*
+ * Sets avg, total, and remainder in thread_ptr
+ */
+void setAvgEtc(){
+    int count = 1;
+    int minTemp = minimum - 1;
+    //can check avgbytes etc info here
+    //printf("avgBytes is: %d",avgBytes);
+    //printf("fileSize is: %d",fileSize);
+
+    thread_pnt[0].fileSize = fileSize;
+    thread_pnt[0].remainderBytes = remaind#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>          
+#include <sys/socket.h>
+#include <strings.h>
+#include <unistd.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <string.h>
+#include <pthread.h>
+
+#define MAXLINE 4096 //size of buffer
+
+/*
+ * NOTE: All these global variables are not being used in the method
+ *       called by pthread_create
+ */
+//CHANGED MAXLINE + 1 to MAXLINE
+char    recvline[MAXLINE + 1], sendline[1024]; //the recieve and send buffers
+struct sockaddr_in servaddr2; //the server address
+
+int minimum; //leave as global->not used with threads
+FILE *fp; //pointer to server list file, leave as global->not used with threads
+
+int fileSize = -1; //size of file that has book
+int remainderBytes = 0; //set as leftover bytes after dividing file size by minimum.
+                        //value is added to only first connection then set to 0
+int avgBytes = 0; //set as average number of bytes to send per connection
+/*
+ * A struct thread that will be used throughout this program to hold info about a thread
+ */
+typedef struct{
+    char recvline[MAXLINE + 1]; //finished setting
+    char sendline[1024]; //finished setting
+    int thread_id; //finished setting
+    FILE *reader; //used to create sep file to put recvbuff into
+    FILE *fp; //finished setting
+    //char ipAddr[1024]; //unneeded?
+    //char portNumbr[1024]; //uneeded?
+    int avgBytes; //finished setting
+    int remainderBytes; //finished setting
+    int minimum; //finished setting
+    int fileSize; //finished setting
+    //struct sockaddr_in servaddr; //the server address ---> may not need
+    int tempVal; //finished setting
+    int setFile; //finished setting
+    int counter; //finished setting
+    char myFileName[1024];
+    char fileOnServer[200];
+    char currentLoc;
+}Thread;
+
+//Thread pointer created -> pointer to an array of structs
+Thread *thread_pnt;
+pthread_t *thread_pnt2;
+/*
+ * This method checks to make sure that the number of 
+ * arguments is not invalid and above 3. It will
+ * throw an error otherwise.
+ */
+void numArgs(int argc){
+    if (argc != 4){
+        perror("usage: a.out <server-info.txt> <num-connections> <filename>\n");
+        exit(EXIT_FAILURE);
+    }
+}
+
+/*
+ * This method creates a socket on the client side so that
+ * the client can interact with the server on this socket.
+ * If a socket cannot be created, an error will be thrown. 
+ * If there is no error, the socket file descriptor 
+ * will be returned.
+ */
+int createSocket(){
+    int sockfdtemp = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfdtemp < 0){
+        perror("socket error\n");
+        exit(1);
+    }
+    return sockfdtemp;
+}
+
+/*
+ * This method gives the server information such as the port
+ * number specified by the user and the ip address. It allows
+ * the client to know information about the server so that the
+ * client can communicate with the server.
+ */
+void createServer(const char *ipaddr, const char *portnum){
+    int port;
+    //if(minimum > 0){
+        sscanf(portnum,"%d",&port);  //port number specified
+        bzero(&servaddr2, sizeof(servaddr2));
+        servaddr2.sin_family =hould be server-info.txt\n");
+            exit(EXIT_FAILURE);
+        }
+        thread_pnt[count].fp = fopen(filename,"r");
+        if (thread_pnt[count].fp == NULL){
+            perror("The file you are trying to open does not exist\n");
+            exit(1);
+        }
+        count++;
+    }
+
+    //set reader file pointer in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    char fileName2[200];
+    while (count <= minTemp){
+        sprintf(fileName2,"myReadingFilez");
+        sprintf(fileName2 + strlen(fileName2), "%d", (long) (count));
+        sprintf(thread_pnt[count].fileOnServer,fileName2); 
+        thread_pnt[count].reader = fopen(fileName2,"a");
+        bzero(fileName2,200);
+        count++;
+    }
+
+    //set counter in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    while(count <= minTemp){
+        thread_pnt[count].counter = count;
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        sprintf(thread_pnt[count].myFileName,fileOnServer);
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        thread_pnt[count].currentLoc = 0;
+        count++;
+    }
+    //thread_pnt[1].thread_id = 5;
+
+}
+
+void getFileSize(const char* fileName){
+
+    int sockfd = createSocket();
+    int recfd;
+
+    //Create the server with its info below
+    int port;
+    char ipAddr[1024]; //max length of ipaddress - used when opneing file
+    char portNumbr[1024]; //max length of portNumbr - used when opening file
+    if(fscanf(fp,"%s %s",ipAddr,portNumbr) > 0){
+        printf("%s %s \n",ipAddr,portNumbr);
+        if (strncmp(ipAddr,"localhost",9) == 0){
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, "127.0.0.1", &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }else{   
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, ipAddr, &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }        
+    }
+
+
+    //connect the the server's socket here
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+
+    sprintf(sendline,"filename");
+    sprintf(sendline + strlen(sendline),fileName);
+
+    if( send(sockfd , sendline , strlen(sendline) , 0) < 0)
+    {
+        perror("Send failed\n");
+        exit(1);     
+    } 
+
+
+    while( (recfd = recv(sockfd , recvline , MAXLINE , 0)) > 0)
+    {
+
+        if(strncmp(recvline,"sizeFile",8) == 0){
+            char subBuff[200];
+            memcpy(subBuff, &recvline[8], strlen(recvline));
+            fileSize = atoi(subBuff);
+            avgBytes = fileSize/minimum;
+            remainderBytes = fileSize%minimum;
+            bzero(recvline,MAXLINE);
+            break; 
+        }
+    }
+
+    close(sockfd);
+    rewind(fp);
+}
+
+/*
+ * This method actually tries to connect the client with the server
+ * by using the connect system call.
+ */ 
+void connectSocket(int sockfd){      
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+}
+
+/*
+ * Sets avg, total, and remainder in thread_ptr
+ */
+void setAvgEtc(){
+    int count = 1;
+    int minTemp = minimum - 1;
+    //can check avgbytes etc info here
+    //printf("avgBytes is: %d",avgBytes);
+    //printf("fileSize is: %d",fileSize);
+
+    thread_pnt[0].fileSize = fileSize;
+    thread_pnt[0].remainderBytes = remaindhould be server-info.txt\n");
+            exit(EXIT_FAILURE);
+        }
+        thread_pnt[count].fp = fopen(filename,"r");
+        if (thread_pnt[count].fp == NULL){
+            perror("The file you are trying to open does not exist\n");
+            exit(1);
+        }
+        count++;
+    }
+
+    //set reader file pointer in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    char fileName2[200];
+    while (count <= minTemp){
+        sprintf(fileName2,"myReadingFilez");
+        sprintf(fileName2 + strlen(fileName2), "%d", (long) (count));
+        sprintf(thread_pnt[count].fileOnServer,fileName2); 
+        thread_pnt[count].reader = fopen(fileName2,"a");
+        bzero(fileName2,200);
+        count++;
+    }
+
+    //set counter in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    while(count <= minTemp){
+        thread_pnt[count].counter = count;
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        sprintf(thread_pnt[count].myFileName,fileOnServer);
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        thread_pnt[count].currentLoc = 0;
+        count++;
+    }
+    //thread_pnt[1].thread_id = 5;
+
+}
+
+void getFileSize(const char* fileName){
+
+    int sockfd = createSocket();
+    int recfd;
+
+    //Create the server with its info below
+    int port;
+    char ipAddr[1024]; //max length of ipaddress - used when opneing file
+    char portNumbr[1024]; //max length of portNumbr - used when opening file
+    if(fscanf(fp,"%s %s",ipAddr,portNumbr) > 0){
+        printf("%s %s \n",ipAddr,portNumbr);
+        if (strncmp(ipAddr,"localhost",9) == 0){
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, "127.0.0.1", &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }else{   
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, ipAddr, &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }        
+    }
+
+
+    //connect the the server's socket here
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+
+    sprintf(sendline,"filename");
+    sprintf(sendline + strlen(sendline),fileName);
+
+    if( send(sockfd , sendline , strlen(sendline) , 0) < 0)
+    {
+        perror("Send failed\n");
+        exit(1);     
+    } 
+
+
+    while( (recfd = recv(sockfd , recvline , MAXLINE , 0)) > 0)
+    {
+
+        if(strncmp(recvline,"sizeFile",8) == 0){
+            char subBuff[200];
+            memcpy(subBuff, &recvline[8], strlen(recvline));
+            fileSize = atoi(subBuff);
+            avgBytes = fileSize/minimum;
+            remainderBytes = fileSize%minimum;
+            bzero(recvline,MAXLINE);
+            break; 
+        }
+    }
+
+    close(sockfd);
+    rewind(fp);
+}
+
+/*
+ * This method actually tries to connect the client with the server
+ * by using the connect system call.
+ */ 
+void connectSocket(int sockfd){      
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+}
+
+/*
+ * Sets avg, total, and remainder in thread_ptr
+ */
+void setAvgEtc(){
+    int count = 1;
+    int minTemp = minimum - 1;
+    //can check avgbytes etc info here
+    //printf("avgBytes is: %d",avgBytes);
+    //printf("fileSize is: %d",fileSize);
+
+    thread_pnt[0].fileSize = fileSize;
+    thread_pnt[0].remainderBytes = remaind#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>          
+#include <sys/socket.h>
+#include <strings.h>
+#include <unistd.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <string.h>
+#include <pthread.h>
+
+#define MAXLINE 4096 //size of buffer
+
+/*
+ * NOTE: All these global variables are not being used in the method
+ *       called by pthread_create
+ */
+//CHANGED MAXLINE + 1 to MAXLINE
+char    recvline[MAXLINE + 1], sendline[1024]; //the recieve and send buffers
+struct sockaddr_in servaddr2; //the server address
+
+int minimum; //leave as global->not used with threads
+FILE *fp; //pointer to server list file, leave as global->not used with threads
+
+int fileSize = -1; //size of file that has book
+int remainderBytes = 0; //set as leftover bytes after dividing file size by minimum.
+                        //value is added to only first connection then set to 0
+int avgBytes = 0; //set as average number of bytes to send per connection
+/*
+ * A struct thread that will be used throughout this program to hold info about a thread
+ */
+typedef struct{
+    char recvline[MAXLINE + 1]; //finished setting
+    char sendline[1024]; //finished setting
+    int thread_id; //finished setting
+    FILE *reader; //used to create sep file to put recvbuff into
+    FILE *fp; //finished setting
+    //char ipAddr[1024]; //unneeded?
+    //char portNumbr[1024]; //uneeded?
+    int avgBytes; //finished setting
+    int remainderBytes; //finished setting
+    int minimum; //finished setting
+    int fileSize; //finished setting
+    //struct sockaddr_in servaddr; //the server address ---> may not need
+    int tempVal; //finished setting
+    int setFile; //finished setting
+    int counter; //finished setting
+    char myFileName[1024];
+    char fileOnServer[200];
+    char currentLoc;
+}Thread;
+
+//Thread pointer created -> pointer to an array of structs
+Thread *thread_pnt;
+pthread_t *thread_pnt2;
+/*
+ * This method checks to make sure that the number of 
+ * arguments is not invalid and above 3. It will
+ * throw an error otherwise.
+ */
+void numArgs(int argc){
+    if (argc != 4){
+        perror("usage: a.out <server-info.txt> <num-connections> <filename>\n");
+        exit(EXIT_FAILURE);
+    }
+}
+
+/*
+ * This method creates a socket on the client side so that
+ * the client can interact with the server on this socket.
+ * If a socket cannot be created, an error will be thrown. 
+ * If there is no error, the socket file descriptor 
+ * will be returned.
+ */
+int createSocket(){
+    int sockfdtemp = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfdtemp < 0){
+        perror("socket error\n");
+        exit(1);
+    }
+    return sockfdtemp;
+}
+
+/*
+ * This method gives the server information such as the port
+ * number specified by the user and the ip address. It allows
+ * the client to know information about the server so that the
+ * client can communicate with the server.
+ */
+void createServer(const char *ipaddr, const char *portnum){
+    int port;
+    //if(minimum > 0){
+        sscanf(portnum,"%d",&port);  //port number specified
+        bzero(&servaddr2, sizeof(servaddr2));
+        servaddr2.sin_family =hould be server-info.txt\n");
+            exit(EXIT_FAILURE);
+        }
+        thread_pnt[count].fp = fopen(filename,"r");
+        if (thread_pnt[count].fp == NULL){
+            perror("The file you are trying to open does not exist\n");
+            exit(1);
+        }
+        count++;
+    }
+
+    //set reader file pointer in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    char fileName2[200];
+    while (count <= minTemp){
+        sprintf(fileName2,"myReadingFilez");
+        sprintf(fileName2 + strlen(fileName2), "%d", (long) (count));
+        sprintf(thread_pnt[count].fileOnServer,fileName2); 
+        thread_pnt[count].reader = fopen(fileName2,"a");
+        bzero(fileName2,200);
+        count++;
+    }
+
+    //set counter in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    while(count <= minTemp){
+        thread_pnt[count].counter = count;
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        sprintf(thread_pnt[count].myFileName,fileOnServer);
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        thread_pnt[count].currentLoc = 0;
+        count++;
+    }
+    //thread_pnt[1].thread_id = 5;
+
+}
+
+void getFileSize(const char* fileName){
+
+    int sockfd = createSocket();
+    int recfd;
+
+    //Create the server with its info below
+    int port;
+    char ipAddr[1024]; //max length of ipaddress - used when opneing file
+    char portNumbr[1024]; //max length of portNumbr - used when opening file
+    if(fscanf(fp,"%s %s",ipAddr,portNumbr) > 0){
+        printf("%s %s \n",ipAddr,portNumbr);
+        if (strncmp(ipAddr,"localhost",9) == 0){
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, "127.0.0.1", &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }else{   
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, ipAddr, &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }        
+    }
+
+
+    //connect the the server's socket here
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+
+    sprintf(sendline,"filename");
+    sprintf(sendline + strlen(sendline),fileName);
+
+    if( send(sockfd , sendline , strlen(sendline) , 0) < 0)
+    {
+        perror("Send failed\n");
+        exit(1);     
+    } 
+
+
+    while( (recfd = recv(sockfd , recvline , MAXLINE , 0)) > 0)
+    {
+
+        if(strncmp(recvline,"sizeFile",8) == 0){
+            char subBuff[200];
+            memcpy(subBuff, &recvline[8], strlen(recvline));
+            fileSize = atoi(subBuff);
+            avgBytes = fileSize/minimum;
+            remainderBytes = fileSize%minimum;
+            bzero(recvline,MAXLINE);
+            break; 
+        }
+    }
+
+    close(sockfd);
+    rewind(fp);
+}
+
+/*
+ * This method actually tries to connect the client with the server
+ * by using the connect system call.
+ */ 
+void connectSocket(int sockfd){      
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+}
+
+/*
+ * Sets avg, total, and remainder in thread_ptr
+ */
+void setAvgEtc(){
+    int count = 1;
+    int minTemp = minimum - 1;
+    //can check avgbytes etc info here
+    //printf("avgBytes is: %d",avgBytes);
+    //printf("fileSize is: %d",fileSize);
+
+    thread_pnt[0].fileSize = fileSize;
+    thread_pnt[0].remainderBytes = remaindhould be server-info.txt\n");
+            exit(EXIT_FAILURE);
+        }
+        thread_pnt[count].fp = fopen(filename,"r");
+        if (thread_pnt[count].fp == NULL){
+            perror("The file you are trying to open does not exist\n");
+            exit(1);
+        }
+        count++;
+    }
+
+    //set reader file pointer in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    char fileName2[200];
+    while (count <= minTemp){
+        sprintf(fileName2,"myReadingFilez");
+        sprintf(fileName2 + strlen(fileName2), "%d", (long) (count));
+        sprintf(thread_pnt[count].fileOnServer,fileName2); 
+        thread_pnt[count].reader = fopen(fileName2,"a");
+        bzero(fileName2,200);
+        count++;
+    }
+
+    //set counter in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    while(count <= minTemp){
+        thread_pnt[count].counter = count;
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        sprintf(thread_pnt[count].myFileName,fileOnServer);
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        thread_pnt[count].currentLoc = 0;
+        count++;
+    }
+    //thread_pnt[1].thread_id = 5;
+
+}
+
+void getFileSize(const char* fileName){
+
+    int sockfd = createSocket();
+    int recfd;
+
+    //Create the server with its info below
+    int port;
+    char ipAddr[1024]; //max length of ipaddress - used when opneing file
+    char portNumbr[1024]; //max length of portNumbr - used when opening file
+    if(fscanf(fp,"%s %s",ipAddr,portNumbr) > 0){
+        printf("%s %s \n",ipAddr,portNumbr);
+        if (strncmp(ipAddr,"localhost",9) == 0){
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, "127.0.0.1", &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }else{   
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, ipAddr, &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }        
+    }
+
+
+    //connect the the server's socket here
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+
+    sprintf(sendline,"filename");
+    sprintf(sendline + strlen(sendline),fileName);
+
+    if( send(sockfd , sendline , strlen(sendline) , 0) < 0)
+    {
+        perror("Send failed\n");
+        exit(1);     
+    } 
+
+
+    while( (recfd = recv(sockfd , recvline , MAXLINE , 0)) > 0)
+    {
+
+        if(strncmp(recvline,"sizeFile",8) == 0){
+            char subBuff[200];
+            memcpy(subBuff, &recvline[8], strlen(recvline));
+            fileSize = atoi(subBuff);
+            avgBytes = fileSize/minimum;
+            remainderBytes = fileSize%minimum;
+            bzero(recvline,MAXLINE);
+            break; 
+        }
+    }
+
+    close(sockfd);
+    rewind(fp);
+}
+
+/*
+ * This method actually tries to connect the client with the server
+ * by using the connect system call.
+ */ 
+void connectSocket(int sockfd){      
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+}
+
+/*
+ * Sets avg, total, and remainder in thread_ptr
+ */
+void setAvgEtc(){
+    int count = 1;
+    int minTemp = minimum - 1;
+    //can check avgbytes etc info here
+    //printf("avgBytes is: %d",avgBytes);
+    //printf("fileSize is: %d",fileSize);
+
+    thread_pnt[0].fileSize = fileSize;
+    thread_pnt[0].remainderBytes = remaind#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>          
+#include <sys/socket.h>
+#include <strings.h>
+#include <unistd.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <string.h>
+#include <pthread.h>
+
+#define MAXLINE 4096 //size of buffer
+
+/*
+ * NOTE: All these global variables are not being used in the method
+ *       called by pthread_create
+ */
+//CHANGED MAXLINE + 1 to MAXLINE
+char    recvline[MAXLINE + 1], sendline[1024]; //the recieve and send buffers
+struct sockaddr_in servaddr2; //the server address
+
+int minimum; //leave as global->not used with threads
+FILE *fp; //pointer to server list file, leave as global->not used with threads
+
+int fileSize = -1; //size of file that has book
+int remainderBytes = 0; //set as leftover bytes after dividing file size by minimum.
+                        //value is added to only first connection then set to 0
+int avgBytes = 0; //set as average number of bytes to send per connection
+/*
+ * A struct thread that will be used throughout this program to hold info about a thread
+ */
+typedef struct{
+    char recvline[MAXLINE + 1]; //finished setting
+    char sendline[1024]; //finished setting
+    int thread_id; //finished setting
+    FILE *reader; //used to create sep file to put recvbuff into
+    FILE *fp; //finished setting
+    //char ipAddr[1024]; //unneeded?
+    //char portNumbr[1024]; //uneeded?
+    int avgBytes; //finished setting
+    int remainderBytes; //finished setting
+    int minimum; //finished setting
+    int fileSize; //finished setting
+    //struct sockaddr_in servaddr; //the server address ---> may not need
+    int tempVal; //finished setting
+    int setFile; //finished setting
+    int counter; //finished setting
+    char myFileName[1024];
+    char fileOnServer[200];
+    char currentLoc;
+}Thread;
+
+//Thread pointer created -> pointer to an array of structs
+Thread *thread_pnt;
+pthread_t *thread_pnt2;
+/*
+ * This method checks to make sure that the number of 
+ * arguments is not invalid and above 3. It will
+ * throw an error otherwise.
+ */
+void numArgs(int argc){
+    if (argc != 4){
+        perror("usage: a.out <server-info.txt> <num-connections> <filename>\n");
+        exit(EXIT_FAILURE);
+    }
+}
+
+/*
+ * This method creates a socket on the client side so that
+ * the client can interact with the server on this socket.
+ * If a socket cannot be created, an error will be thrown. 
+ * If there is no error, the socket file descriptor 
+ * will be returned.
+ */
+int createSocket(){
+    int sockfdtemp = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfdtemp < 0){
+        perror("socket error\n");
+        exit(1);
+    }
+    return sockfdtemp;
+}
+
+/*
+ * This method gives the server information such as the port
+ * number specified by the user and the ip address. It allows
+ * the client to know information about the server so that the
+ * client can communicate with the server.
+ */
+void createServer(const char *ipaddr, const char *portnum){
+    int port;
+    //if(minimum > 0){
+        sscanf(portnum,"%d",&port);  //port number specified
+        bzero(&servaddr2, sizeof(servaddr2));
+        servaddr2.sin_family =hould be server-info.txt\n");
+            exit(EXIT_FAILURE);
+        }
+        thread_pnt[count].fp = fopen(filename,"r");
+        if (thread_pnt[count].fp == NULL){
+            perror("The file you are trying to open does not exist\n");
+            exit(1);
+        }
+        count++;
+    }
+
+    //set reader file pointer in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    char fileName2[200];
+    while (count <= minTemp){
+        sprintf(fileName2,"myReadingFilez");
+        sprintf(fileName2 + strlen(fileName2), "%d", (long) (count));
+        sprintf(thread_pnt[count].fileOnServer,fileName2); 
+        thread_pnt[count].reader = fopen(fileName2,"a");
+        bzero(fileName2,200);
+        count++;
+    }
+
+    //set counter in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    while(count <= minTemp){
+        thread_pnt[count].counter = count;
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        sprintf(thread_pnt[count].myFileName,fileOnServer);
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        thread_pnt[count].currentLoc = 0;
+        count++;
+    }
+    //thread_pnt[1].thread_id = 5;
+
+}
+
+void getFileSize(const char* fileName){
+
+    int sockfd = createSocket();
+    int recfd;
+
+    //Create the server with its info below
+    int port;
+    char ipAddr[1024]; //max length of ipaddress - used when opneing file
+    char portNumbr[1024]; //max length of portNumbr - used when opening file
+    if(fscanf(fp,"%s %s",ipAddr,portNumbr) > 0){
+        printf("%s %s \n",ipAddr,portNumbr);
+        if (strncmp(ipAddr,"localhost",9) == 0){
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, "127.0.0.1", &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }else{   
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, ipAddr, &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }        
+    }
+
+
+    //connect the the server's socket here
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+
+    sprintf(sendline,"filename");
+    sprintf(sendline + strlen(sendline),fileName);
+
+    if( send(sockfd , sendline , strlen(sendline) , 0) < 0)
+    {
+        perror("Send failed\n");
+        exit(1);     
+    } 
+
+
+    while( (recfd = recv(sockfd , recvline , MAXLINE , 0)) > 0)
+    {
+
+        if(strncmp(recvline,"sizeFile",8) == 0){
+            char subBuff[200];
+            memcpy(subBuff, &recvline[8], strlen(recvline));
+            fileSize = atoi(subBuff);
+            avgBytes = fileSize/minimum;
+            remainderBytes = fileSize%minimum;
+            bzero(recvline,MAXLINE);
+            break; 
+        }
+    }
+
+    close(sockfd);
+    rewind(fp);
+}
+
+/*
+ * This method actually tries to connect the client with the server
+ * by using the connect system call.
+ */ 
+void connectSocket(int sockfd){      
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+}
+
+/*
+ * Sets avg, total, and remainder in thread_ptr
+ */
+void setAvgEtc(){
+    int count = 1;
+    int minTemp = minimum - 1;
+    //can check avgbytes etc info here
+    //printf("avgBytes is: %d",avgBytes);
+    //printf("fileSize is: %d",fileSize);
+
+    thread_pnt[0].fileSize = fileSize;
+    thread_pnt[0].remainderBytes = remaindhould be server-info.txt\n");
+            exit(EXIT_FAILURE);
+        }
+        thread_pnt[count].fp = fopen(filename,"r");
+        if (thread_pnt[count].fp == NULL){
+            perror("The file you are trying to open does not exist\n");
+            exit(1);
+        }
+        count++;
+    }
+
+    //set reader file pointer in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    char fileName2[200];
+    while (count <= minTemp){
+        sprintf(fileName2,"myReadingFilez");
+        sprintf(fileName2 + strlen(fileName2), "%d", (long) (count));
+        sprintf(thread_pnt[count].fileOnServer,fileName2); 
+        thread_pnt[count].reader = fopen(fileName2,"a");
+        bzero(fileName2,200);
+        count++;
+    }
+
+    //set counter in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    while(count <= minTemp){
+        thread_pnt[count].counter = count;
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        sprintf(thread_pnt[count].myFileName,fileOnServer);
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        thread_pnt[count].currentLoc = 0;
+        count++;
+    }
+    //thread_pnt[1].thread_id = 5;
+
+}
+
+void getFileSize(const char* fileName){
+
+    int sockfd = createSocket();
+    int recfd;
+
+    //Create the server with its info below
+    int port;
+    char ipAddr[1024]; //max length of ipaddress - used when opneing file
+    char portNumbr[1024]; //max length of portNumbr - used when opening file
+    if(fscanf(fp,"%s %s",ipAddr,portNumbr) > 0){
+        printf("%s %s \n",ipAddr,portNumbr);
+        if (strncmp(ipAddr,"localhost",9) == 0){
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, "127.0.0.1", &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }else{   
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, ipAddr, &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }        
+    }
+
+
+    //connect the the server's socket here
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+
+    sprintf(sendline,"filename");
+    sprintf(sendline + strlen(sendline),fileName);
+
+    if( send(sockfd , sendline , strlen(sendline) , 0) < 0)
+    {
+        perror("Send failed\n");
+        exit(1);     
+    } 
+
+
+    while( (recfd = recv(sockfd , recvline , MAXLINE , 0)) > 0)
+    {
+
+        if(strncmp(recvline,"sizeFile",8) == 0){
+            char subBuff[200];
+            memcpy(subBuff, &recvline[8], strlen(recvline));
+            fileSize = atoi(subBuff);
+            avgBytes = fileSize/minimum;
+            remainderBytes = fileSize%minimum;
+            bzero(recvline,MAXLINE);
+            break; 
+        }
+    }
+
+    close(sockfd);
+    rewind(fp);
+}
+
+/*
+ * This method actually tries to connect the client with the server
+ * by using the connect system call.
+ */ 
+void connectSocket(int sockfd){      
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+}
+
+/*
+ * Sets avg, total, and remainder in thread_ptr
+ */
+void setAvgEtc(){
+    int count = 1;
+    int minTemp = minimum - 1;
+    //can check avgbytes etc info here
+    //printf("avgBytes is: %d",avgBytes);
+    //printf("fileSize is: %d",fileSize);
+
+    thread_pnt[0].fileSize = fileSize;
+    thread_pnt[0].remainderBytes = remaind#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>          
+#include <sys/socket.h>
+#include <strings.h>
+#include <unistd.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <string.h>
+#include <pthread.h>
+
+#define MAXLINE 4096 //size of buffer
+
+/*
+ * NOTE: All these global variables are not being used in the method
+ *       called by pthread_create
+ */
+//CHANGED MAXLINE + 1 to MAXLINE
+char    recvline[MAXLINE + 1], sendline[1024]; //the recieve and send buffers
+struct sockaddr_in servaddr2; //the server address
+
+int minimum; //leave as global->not used with threads
+FILE *fp; //pointer to server list file, leave as global->not used with threads
+
+int fileSize = -1; //size of file that has book
+int remainderBytes = 0; //set as leftover bytes after dividing file size by minimum.
+                        //value is added to only first connection then set to 0
+int avgBytes = 0; //set as average number of bytes to send per connection
+/*
+ * A struct thread that will be used throughout this program to hold info about a thread
+ */
+typedef struct{
+    char recvline[MAXLINE + 1]; //finished setting
+    char sendline[1024]; //finished setting
+    int thread_id; //finished setting
+    FILE *reader; //used to create sep file to put recvbuff into
+    FILE *fp; //finished setting
+    //char ipAddr[1024]; //unneeded?
+    //char portNumbr[1024]; //uneeded?
+    int avgBytes; //finished setting
+    int remainderBytes; //finished setting
+    int minimum; //finished setting
+    int fileSize; //finished setting
+    //struct sockaddr_in servaddr; //the server address ---> may not need
+    int tempVal; //finished setting
+    int setFile; //finished setting
+    int counter; //finished setting
+    char myFileName[1024];
+    char fileOnServer[200];
+    char currentLoc;
+}Thread;
+
+//Thread pointer created -> pointer to an array of structs
+Thread *thread_pnt;
+pthread_t *thread_pnt2;
+/*
+ * This method checks to make sure that the number of 
+ * arguments is not invalid and above 3. It will
+ * throw an error otherwise.
+ */
+void numArgs(int argc){
+    if (argc != 4){
+        perror("usage: a.out <server-info.txt> <num-connections> <filename>\n");
+        exit(EXIT_FAILURE);
+    }
+}
+
+/*
+ * This method creates a socket on the client side so that
+ * the client can interact with the server on this socket.
+ * If a socket cannot be created, an error will be thrown. 
+ * If there is no error, the socket file descriptor 
+ * will be returned.
+ */
+int createSocket(){
+    int sockfdtemp = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfdtemp < 0){
+        perror("socket error\n");
+        exit(1);
+    }
+    return sockfdtemp;
+}
+
+/*
+ * This method gives the server information such as the port
+ * number specified by the user and the ip address. It allows
+ * the client to know information about the server so that the
+ * client can communicate with the server.
+ */
+void createServer(const char *ipaddr, const char *portnum){
+    int port;
+    //if(minimum > 0){
+        sscanf(portnum,"%d",&port);  //port number specified
+        bzero(&servaddr2, sizeof(servaddr2));
+        servaddr2.sin_family =hould be server-info.txt\n");
+            exit(EXIT_FAILURE);
+        }
+        thread_pnt[count].fp = fopen(filename,"r");
+        if (thread_pnt[count].fp == NULL){
+            perror("The file you are trying to open does not exist\n");
+            exit(1);
+        }
+        count++;
+    }
+
+    //set reader file pointer in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    char fileName2[200];
+    while (count <= minTemp){
+        sprintf(fileName2,"myReadingFilez");
+        sprintf(fileName2 + strlen(fileName2), "%d", (long) (count));
+        sprintf(thread_pnt[count].fileOnServer,fileName2); 
+        thread_pnt[count].reader = fopen(fileName2,"a");
+        bzero(fileName2,200);
+        count++;
+    }
+
+    //set counter in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    while(count <= minTemp){
+        thread_pnt[count].counter = count;
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        sprintf(thread_pnt[count].myFileName,fileOnServer);
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        thread_pnt[count].currentLoc = 0;
+        count++;
+    }
+    //thread_pnt[1].thread_id = 5;
+
+}
+
+void getFileSize(const char* fileName){
+
+    int sockfd = createSocket();
+    int recfd;
+
+    //Create the server with its info below
+    int port;
+    char ipAddr[1024]; //max length of ipaddress - used when opneing file
+    char portNumbr[1024]; //max length of portNumbr - used when opening file
+    if(fscanf(fp,"%s %s",ipAddr,portNumbr) > 0){
+        printf("%s %s \n",ipAddr,portNumbr);
+        if (strncmp(ipAddr,"localhost",9) == 0){
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, "127.0.0.1", &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }else{   
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, ipAddr, &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }        
+    }
+
+
+    //connect the the server's socket here
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+
+    sprintf(sendline,"filename");
+    sprintf(sendline + strlen(sendline),fileName);
+
+    if( send(sockfd , sendline , strlen(sendline) , 0) < 0)
+    {
+        perror("Send failed\n");
+        exit(1);     
+    } 
+
+
+    while( (recfd = recv(sockfd , recvline , MAXLINE , 0)) > 0)
+    {
+
+        if(strncmp(recvline,"sizeFile",8) == 0){
+            char subBuff[200];
+            memcpy(subBuff, &recvline[8], strlen(recvline));
+            fileSize = atoi(subBuff);
+            avgBytes = fileSize/minimum;
+            remainderBytes = fileSize%minimum;
+            bzero(recvline,MAXLINE);
+            break; 
+        }
+    }
+
+    close(sockfd);
+    rewind(fp);
+}
+
+/*
+ * This method actually tries to connect the client with the server
+ * by using the connect system call.
+ */ 
+void connectSocket(int sockfd){      
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+}
+
+/*
+ * Sets avg, total, and remainder in thread_ptr
+ */
+void setAvgEtc(){
+    int count = 1;
+    int minTemp = minimum - 1;
+    //can check avgbytes etc info here
+    //printf("avgBytes is: %d",avgBytes);
+    //printf("fileSize is: %d",fileSize);
+
+    thread_pnt[0].fileSize = fileSize;
+    thread_pnt[0].remainderBytes = remaindhould be server-info.txt\n");
+            exit(EXIT_FAILURE);
+        }
+        thread_pnt[count].fp = fopen(filename,"r");
+        if (thread_pnt[count].fp == NULL){
+            perror("The file you are trying to open does not exist\n");
+            exit(1);
+        }
+        count++;
+    }
+
+    //set reader file pointer in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    char fileName2[200];
+    while (count <= minTemp){
+        sprintf(fileName2,"myReadingFilez");
+        sprintf(fileName2 + strlen(fileName2), "%d", (long) (count));
+        sprintf(thread_pnt[count].fileOnServer,fileName2); 
+        thread_pnt[count].reader = fopen(fileName2,"a");
+        bzero(fileName2,200);
+        count++;
+    }
+
+    //set counter in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    while(count <= minTemp){
+        thread_pnt[count].counter = count;
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        sprintf(thread_pnt[count].myFileName,fileOnServer);
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        thread_pnt[count].currentLoc = 0;
+        count++;
+    }
+    //thread_pnt[1].thread_id = 5;
+
+}
+
+void getFileSize(const char* fileName){
+
+    int sockfd = createSocket();
+    int recfd;
+
+    //Create the server with its info below
+    int port;
+    char ipAddr[1024]; //max length of ipaddress - used when opneing file
+    char portNumbr[1024]; //max length of portNumbr - used when opening file
+    if(fscanf(fp,"%s %s",ipAddr,portNumbr) > 0){
+        printf("%s %s \n",ipAddr,portNumbr);
+        if (strncmp(ipAddr,"localhost",9) == 0){
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, "127.0.0.1", &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }else{   
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, ipAddr, &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }        
+    }
+
+
+    //connect the the server's socket here
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+
+    sprintf(sendline,"filename");
+    sprintf(sendline + strlen(sendline),fileName);
+
+    if( send(sockfd , sendline , strlen(sendline) , 0) < 0)
+    {
+        perror("Send failed\n");
+        exit(1);     
+    } 
+
+
+    while( (recfd = recv(sockfd , recvline , MAXLINE , 0)) > 0)
+    {
+
+        if(strncmp(recvline,"sizeFile",8) == 0){
+            char subBuff[200];
+            memcpy(subBuff, &recvline[8], strlen(recvline));
+            fileSize = atoi(subBuff);
+            avgBytes = fileSize/minimum;
+            remainderBytes = fileSize%minimum;
+            bzero(recvline,MAXLINE);
+            break; 
+        }
+    }
+
+    close(sockfd);
+    rewind(fp);
+}
+
+/*
+ * This method actually tries to connect the client with the server
+ * by using the connect system call.
+ */ 
+void connectSocket(int sockfd){      
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+}
+
+/*
+ * Sets avg, total, and remainder in thread_ptr
+ */
+void setAvgEtc(){
+    int count = 1;
+    int minTemp = minimum - 1;
+    //can check avgbytes etc info here
+    //printf("avgBytes is: %d",avgBytes);
+    //printf("fileSize is: %d",fileSize);
+
+    thread_pnt[0].fileSize = fileSize;
+    thread_pnt[0].remainderBytes = remaind#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>          
+#include <sys/socket.h>
+#include <strings.h>
+#include <unistd.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <string.h>
+#include <pthread.h>
+
+#define MAXLINE 4096 //size of buffer
+
+/*
+ * NOTE: All these global variables are not being used in the method
+ *       called by pthread_create
+ */
+//CHANGED MAXLINE + 1 to MAXLINE
+char    recvline[MAXLINE + 1], sendline[1024]; //the recieve and send buffers
+struct sockaddr_in servaddr2; //the server address
+
+int minimum; //leave as global->not used with threads
+FILE *fp; //pointer to server list file, leave as global->not used with threads
+
+int fileSize = -1; //size of file that has book
+int remainderBytes = 0; //set as leftover bytes after dividing file size by minimum.
+                        //value is added to only first connection then set to 0
+int avgBytes = 0; //set as average number of bytes to send per connection
+/*
+ * A struct thread that will be used throughout this program to hold info about a thread
+ */
+typedef struct{
+    char recvline[MAXLINE + 1]; //finished setting
+    char sendline[1024]; //finished setting
+    int thread_id; //finished setting
+    FILE *reader; //used to create sep file to put recvbuff into
+    FILE *fp; //finished setting
+    //char ipAddr[1024]; //unneeded?
+    //char portNumbr[1024]; //uneeded?
+    int avgBytes; //finished setting
+    int remainderBytes; //finished setting
+    int minimum; //finished setting
+    int fileSize; //finished setting
+    //struct sockaddr_in servaddr; //the server address ---> may not need
+    int tempVal; //finished setting
+    int setFile; //finished setting
+    int counter; //finished setting
+    char myFileName[1024];
+    char fileOnServer[200];
+    char currentLoc;
+}Thread;
+
+//Thread pointer created -> pointer to an array of structs
+Thread *thread_pnt;
+pthread_t *thread_pnt2;
+/*
+ * This method checks to make sure that the number of 
+ * arguments is not invalid and above 3. It will
+ * throw an error otherwise.
+ */
+void numArgs(int argc){
+    if (argc != 4){
+        perror("usage: a.out <server-info.txt> <num-connections> <filename>\n");
+        exit(EXIT_FAILURE);
+    }
+}
+
+/*
+ * This method creates a socket on the client side so that
+ * the client can interact with the server on this socket.
+ * If a socket cannot be created, an error will be thrown. 
+ * If there is no error, the socket file descriptor 
+ * will be returned.
+ */
+int createSocket(){
+    int sockfdtemp = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfdtemp < 0){
+        perror("socket error\n");
+        exit(1);
+    }
+    return sockfdtemp;
+}
+
+/*
+ * This method gives the server information such as the port
+ * number specified by the user and the ip address. It allows
+ * the client to know information about the server so that the
+ * client can communicate with the server.
+ */
+void createServer(const char *ipaddr, const char *portnum){
+    int port;
+    //if(minimum > 0){
+        sscanf(portnum,"%d",&port);  //port number specified
+        bzero(&servaddr2, sizeof(servaddr2));
+        servaddr2.sin_family =hould be server-info.txt\n");
+            exit(EXIT_FAILURE);
+        }
+        thread_pnt[count].fp = fopen(filename,"r");
+        if (thread_pnt[count].fp == NULL){
+            perror("The file you are trying to open does not exist\n");
+            exit(1);
+        }
+        count++;
+    }
+
+    //set reader file pointer in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    char fileName2[200];
+    while (count <= minTemp){
+        sprintf(fileName2,"myReadingFilez");
+        sprintf(fileName2 + strlen(fileName2), "%d", (long) (count));
+        sprintf(thread_pnt[count].fileOnServer,fileName2); 
+        thread_pnt[count].reader = fopen(fileName2,"a");
+        bzero(fileName2,200);
+        count++;
+    }
+
+    //set counter in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    while(count <= minTemp){
+        thread_pnt[count].counter = count;
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        sprintf(thread_pnt[count].myFileName,fileOnServer);
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        thread_pnt[count].currentLoc = 0;
+        count++;
+    }
+    //thread_pnt[1].thread_id = 5;
+
+}
+
+void getFileSize(const char* fileName){
+
+    int sockfd = createSocket();
+    int recfd;
+
+    //Create the server with its info below
+    int port;
+    char ipAddr[1024]; //max length of ipaddress - used when opneing file
+    char portNumbr[1024]; //max length of portNumbr - used when opening file
+    if(fscanf(fp,"%s %s",ipAddr,portNumbr) > 0){
+        printf("%s %s \n",ipAddr,portNumbr);
+        if (strncmp(ipAddr,"localhost",9) == 0){
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, "127.0.0.1", &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }else{   
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, ipAddr, &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }        
+    }
+
+
+    //connect the the server's socket here
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+
+    sprintf(sendline,"filename");
+    sprintf(sendline + strlen(sendline),fileName);
+
+    if( send(sockfd , sendline , strlen(sendline) , 0) < 0)
+    {
+        perror("Send failed\n");
+        exit(1);     
+    } 
+
+
+    while( (recfd = recv(sockfd , recvline , MAXLINE , 0)) > 0)
+    {
+
+        if(strncmp(recvline,"sizeFile",8) == 0){
+            char subBuff[200];
+            memcpy(subBuff, &recvline[8], strlen(recvline));
+            fileSize = atoi(subBuff);
+            avgBytes = fileSize/minimum;
+            remainderBytes = fileSize%minimum;
+            bzero(recvline,MAXLINE);
+            break; 
+        }
+    }
+
+    close(sockfd);
+    rewind(fp);
+}
+
+/*
+ * This method actually tries to connect the client with the server
+ * by using the connect system call.
+ */ 
+void connectSocket(int sockfd){      
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+}
+
+/*
+ * Sets avg, total, and remainder in thread_ptr
+ */
+void setAvgEtc(){
+    int count = 1;
+    int minTemp = minimum - 1;
+    //can check avgbytes etc info here
+    //printf("avgBytes is: %d",avgBytes);
+    //printf("fileSize is: %d",fileSize);
+
+    thread_pnt[0].fileSize = fileSize;
+    thread_pnt[0].remainderBytes = remaindhould be server-info.txt\n");
+            exit(EXIT_FAILURE);
+        }
+        thread_pnt[count].fp = fopen(filename,"r");
+        if (thread_pnt[count].fp == NULL){
+            perror("The file you are trying to open does not exist\n");
+            exit(1);
+        }
+        count++;
+    }
+
+    //set reader file pointer in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    char fileName2[200];
+    while (count <= minTemp){
+        sprintf(fileName2,"myReadingFilez");
+        sprintf(fileName2 + strlen(fileName2), "%d", (long) (count));
+        sprintf(thread_pnt[count].fileOnServer,fileName2); 
+        thread_pnt[count].reader = fopen(fileName2,"a");
+        bzero(fileName2,200);
+        count++;
+    }
+
+    //set counter in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    while(count <= minTemp){
+        thread_pnt[count].counter = count;
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        sprintf(thread_pnt[count].myFileName,fileOnServer);
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        thread_pnt[count].currentLoc = 0;
+        count++;
+    }
+    //thread_pnt[1].thread_id = 5;
+
+}
+
+void getFileSize(const char* fileName){
+
+    int sockfd = createSocket();
+    int recfd;
+
+    //Create the server with its info below
+    int port;
+    char ipAddr[1024]; //max length of ipaddress - used when opneing file
+    char portNumbr[1024]; //max length of portNumbr - used when opening file
+    if(fscanf(fp,"%s %s",ipAddr,portNumbr) > 0){
+        printf("%s %s \n",ipAddr,portNumbr);
+        if (strncmp(ipAddr,"localhost",9) == 0){
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, "127.0.0.1", &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }else{   
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, ipAddr, &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }        
+    }
+
+
+    //connect the the server's socket here
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+
+    sprintf(sendline,"filename");
+    sprintf(sendline + strlen(sendline),fileName);
+
+    if( send(sockfd , sendline , strlen(sendline) , 0) < 0)
+    {
+        perror("Send failed\n");
+        exit(1);     
+    } 
+
+
+    while( (recfd = recv(sockfd , recvline , MAXLINE , 0)) > 0)
+    {
+
+        if(strncmp(recvline,"sizeFile",8) == 0){
+            char subBuff[200];
+            memcpy(subBuff, &recvline[8], strlen(recvline));
+            fileSize = atoi(subBuff);
+            avgBytes = fileSize/minimum;
+            remainderBytes = fileSize%minimum;
+            bzero(recvline,MAXLINE);
+            break; 
+        }
+    }
+
+    close(sockfd);
+    rewind(fp);
+}
+
+/*
+ * This method actually tries to connect the client with the server
+ * by using the connect system call.
+ */ 
+void connectSocket(int sockfd){      
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+}
+
+/*
+ * Sets avg, total, and remainder in thread_ptr
+ */
+void setAvgEtc(){
+    int count = 1;
+    int minTemp = minimum - 1;
+    //can check avgbytes etc info here
+    //printf("avgBytes is: %d",avgBytes);
+    //printf("fileSize is: %d",fileSize);
+
+    thread_pnt[0].fileSize = fileSize;
+    thread_pnt[0].remainderBytes = remaind#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>          
+#include <sys/socket.h>
+#include <strings.h>
+#include <unistd.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <string.h>
+#include <pthread.h>
+
+#define MAXLINE 4096 //size of buffer
+
+/*
+ * NOTE: All these global variables are not being used in the method
+ *       called by pthread_create
+ */
+//CHANGED MAXLINE + 1 to MAXLINE
+char    recvline[MAXLINE + 1], sendline[1024]; //the recieve and send buffers
+struct sockaddr_in servaddr2; //the server address
+
+int minimum; //leave as global->not used with threads
+FILE *fp; //pointer to server list file, leave as global->not used with threads
+
+int fileSize = -1; //size of file that has book
+int remainderBytes = 0; //set as leftover bytes after dividing file size by minimum.
+                        //value is added to only first connection then set to 0
+int avgBytes = 0; //set as average number of bytes to send per connection
+/*
+ * A struct thread that will be used throughout this program to hold info about a thread
+ */
+typedef struct{
+    char recvline[MAXLINE + 1]; //finished setting
+    char sendline[1024]; //finished setting
+    int thread_id; //finished setting
+    FILE *reader; //used to create sep file to put recvbuff into
+    FILE *fp; //finished setting
+    //char ipAddr[1024]; //unneeded?
+    //char portNumbr[1024]; //uneeded?
+    int avgBytes; //finished setting
+    int remainderBytes; //finished setting
+    int minimum; //finished setting
+    int fileSize; //finished setting
+    //struct sockaddr_in servaddr; //the server address ---> may not need
+    int tempVal; //finished setting
+    int setFile; //finished setting
+    int counter; //finished setting
+    char myFileName[1024];
+    char fileOnServer[200];
+    char currentLoc;
+}Thread;
+
+//Thread pointer created -> pointer to an array of structs
+Thread *thread_pnt;
+pthread_t *thread_pnt2;
+/*
+ * This method checks to make sure that the number of 
+ * arguments is not invalid and above 3. It will
+ * throw an error otherwise.
+ */
+void numArgs(int argc){
+    if (argc != 4){
+        perror("usage: a.out <server-info.txt> <num-connections> <filename>\n");
+        exit(EXIT_FAILURE);
+    }
+}
+
+/*
+ * This method creates a socket on the client side so that
+ * the client can interact with the server on this socket.
+ * If a socket cannot be created, an error will be thrown. 
+ * If there is no error, the socket file descriptor 
+ * will be returned.
+ */
+int createSocket(){
+    int sockfdtemp = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfdtemp < 0){
+        perror("socket error\n");
+        exit(1);
+    }
+    return sockfdtemp;
+}
+
+/*
+ * This method gives the server information such as the port
+ * number specified by the user and the ip address. It allows
+ * the client to know information about the server so that the
+ * client can communicate with the server.
+ */
+void createServer(const char *ipaddr, const char *portnum){
+    int port;
+    //if(minimum > 0){
+        sscanf(portnum,"%d",&port);  //port number specified
+        bzero(&servaddr2, sizeof(servaddr2));
+        servaddr2.sin_family =hould be server-info.txt\n");
+            exit(EXIT_FAILURE);
+        }
+        thread_pnt[count].fp = fopen(filename,"r");
+        if (thread_pnt[count].fp == NULL){
+            perror("The file you are trying to open does not exist\n");
+            exit(1);
+        }
+        count++;
+    }
+
+    //set reader file pointer in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    char fileName2[200];
+    while (count <= minTemp){
+        sprintf(fileName2,"myReadingFilez");
+        sprintf(fileName2 + strlen(fileName2), "%d", (long) (count));
+        sprintf(thread_pnt[count].fileOnServer,fileName2); 
+        thread_pnt[count].reader = fopen(fileName2,"a");
+        bzero(fileName2,200);
+        count++;
+    }
+
+    //set counter in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    while(count <= minTemp){
+        thread_pnt[count].counter = count;
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        sprintf(thread_pnt[count].myFileName,fileOnServer);
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        thread_pnt[count].currentLoc = 0;
+        count++;
+    }
+    //thread_pnt[1].thread_id = 5;
+
+}
+
+void getFileSize(const char* fileName){
+
+    int sockfd = createSocket();
+    int recfd;
+
+    //Create the server with its info below
+    int port;
+    char ipAddr[1024]; //max length of ipaddress - used when opneing file
+    char portNumbr[1024]; //max length of portNumbr - used when opening file
+    if(fscanf(fp,"%s %s",ipAddr,portNumbr) > 0){
+        printf("%s %s \n",ipAddr,portNumbr);
+        if (strncmp(ipAddr,"localhost",9) == 0){
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, "127.0.0.1", &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }else{   
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, ipAddr, &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }        
+    }
+
+
+    //connect the the server's socket here
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+
+    sprintf(sendline,"filename");
+    sprintf(sendline + strlen(sendline),fileName);
+
+    if( send(sockfd , sendline , strlen(sendline) , 0) < 0)
+    {
+        perror("Send failed\n");
+        exit(1);     
+    } 
+
+
+    while( (recfd = recv(sockfd , recvline , MAXLINE , 0)) > 0)
+    {
+
+        if(strncmp(recvline,"sizeFile",8) == 0){
+            char subBuff[200];
+            memcpy(subBuff, &recvline[8], strlen(recvline));
+            fileSize = atoi(subBuff);
+            avgBytes = fileSize/minimum;
+            remainderBytes = fileSize%minimum;
+            bzero(recvline,MAXLINE);
+            break; 
+        }
+    }
+
+    close(sockfd);
+    rewind(fp);
+}
+
+/*
+ * This method actually tries to connect the client with the server
+ * by using the connect system call.
+ */ 
+void connectSocket(int sockfd){      
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+}
+
+/*
+ * Sets avg, total, and remainder in thread_ptr
+ */
+void setAvgEtc(){
+    int count = 1;
+    int minTemp = minimum - 1;
+    //can check avgbytes etc info here
+    //printf("avgBytes is: %d",avgBytes);
+    //printf("fileSize is: %d",fileSize);
+
+    thread_pnt[0].fileSize = fileSize;
+    thread_pnt[0].remainderBytes = remaindhould be server-info.txt\n");
+            exit(EXIT_FAILURE);
+        }
+        thread_pnt[count].fp = fopen(filename,"r");
+        if (thread_pnt[count].fp == NULL){
+            perror("The file you are trying to open does not exist\n");
+            exit(1);
+        }
+        count++;
+    }
+
+    //set reader file pointer in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    char fileName2[200];
+    while (count <= minTemp){
+        sprintf(fileName2,"myReadingFilez");
+        sprintf(fileName2 + strlen(fileName2), "%d", (long) (count));
+        sprintf(thread_pnt[count].fileOnServer,fileName2); 
+        thread_pnt[count].reader = fopen(fileName2,"a");
+        bzero(fileName2,200);
+        count++;
+    }
+
+    //set counter in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    while(count <= minTemp){
+        thread_pnt[count].counter = count;
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        sprintf(thread_pnt[count].myFileName,fileOnServer);
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        thread_pnt[count].currentLoc = 0;
+        count++;
+    }
+    //thread_pnt[1].thread_id = 5;
+
+}
+
+void getFileSize(const char* fileName){
+
+    int sockfd = createSocket();
+    int recfd;
+
+    //Create the server with its info below
+    int port;
+    char ipAddr[1024]; //max length of ipaddress - used when opneing file
+    char portNumbr[1024]; //max length of portNumbr - used when opening file
+    if(fscanf(fp,"%s %s",ipAddr,portNumbr) > 0){
+        printf("%s %s \n",ipAddr,portNumbr);
+        if (strncmp(ipAddr,"localhost",9) == 0){
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, "127.0.0.1", &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }else{   
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, ipAddr, &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }        
+    }
+
+
+    //connect the the server's socket here
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+
+    sprintf(sendline,"filename");
+    sprintf(sendline + strlen(sendline),fileName);
+
+    if( send(sockfd , sendline , strlen(sendline) , 0) < 0)
+    {
+        perror("Send failed\n");
+        exit(1);     
+    } 
+
+
+    while( (recfd = recv(sockfd , recvline , MAXLINE , 0)) > 0)
+    {
+
+        if(strncmp(recvline,"sizeFile",8) == 0){
+            char subBuff[200];
+            memcpy(subBuff, &recvline[8], strlen(recvline));
+            fileSize = atoi(subBuff);
+            avgBytes = fileSize/minimum;
+            remainderBytes = fileSize%minimum;
+            bzero(recvline,MAXLINE);
+            break; 
+        }
+    }
+
+    close(sockfd);
+    rewind(fp);
+}
+
+/*
+ * This method actually tries to connect the client with the server
+ * by using the connect system call.
+ */ 
+void connectSocket(int sockfd){      
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+}
+
+/*
+ * Sets avg, total, and remainder in thread_ptr
+ */
+void setAvgEtc(){
+    int count = 1;
+    int minTemp = minimum - 1;
+    //can check avgbytes etc info here
+    //printf("avgBytes is: %d",avgBytes);
+    //printf("fileSize is: %d",fileSize);
+
+    thread_pnt[0].fileSize = fileSize;
+    thread_pnt[0].remainderBytes = remaind#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>          
+#include <sys/socket.h>
+#include <strings.h>
+#include <unistd.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <string.h>
+#include <pthread.h>
+
+#define MAXLINE 4096 //size of buffer
+
+/*
+ * NOTE: All these global variables are not being used in the method
+ *       called by pthread_create
+ */
+//CHANGED MAXLINE + 1 to MAXLINE
+char    recvline[MAXLINE + 1], sendline[1024]; //the recieve and send buffers
+struct sockaddr_in servaddr2; //the server address
+
+int minimum; //leave as global->not used with threads
+FILE *fp; //pointer to server list file, leave as global->not used with threads
+
+int fileSize = -1; //size of file that has book
+int remainderBytes = 0; //set as leftover bytes after dividing file size by minimum.
+                        //value is added to only first connection then set to 0
+int avgBytes = 0; //set as average number of bytes to send per connection
+/*
+ * A struct thread that will be used throughout this program to hold info about a thread
+ */
+typedef struct{
+    char recvline[MAXLINE + 1]; //finished setting
+    char sendline[1024]; //finished setting
+    int thread_id; //finished setting
+    FILE *reader; //used to create sep file to put recvbuff into
+    FILE *fp; //finished setting
+    //char ipAddr[1024]; //unneeded?
+    //char portNumbr[1024]; //uneeded?
+    int avgBytes; //finished setting
+    int remainderBytes; //finished setting
+    int minimum; //finished setting
+    int fileSize; //finished setting
+    //struct sockaddr_in servaddr; //the server address ---> may not need
+    int tempVal; //finished setting
+    int setFile; //finished setting
+    int counter; //finished setting
+    char myFileName[1024];
+    char fileOnServer[200];
+    char currentLoc;
+}Thread;
+
+//Thread pointer created -> pointer to an array of structs
+Thread *thread_pnt;
+pthread_t *thread_pnt2;
+/*
+ * This method checks to make sure that the number of 
+ * arguments is not invalid and above 3. It will
+ * throw an error otherwise.
+ */
+void numArgs(int argc){
+    if (argc != 4){
+        perror("usage: a.out <server-info.txt> <num-connections> <filename>\n");
+        exit(EXIT_FAILURE);
+    }
+}
+
+/*
+ * This method creates a socket on the client side so that
+ * the client can interact with the server on this socket.
+ * If a socket cannot be created, an error will be thrown. 
+ * If there is no error, the socket file descriptor 
+ * will be returned.
+ */
+int createSocket(){
+    int sockfdtemp = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfdtemp < 0){
+        perror("socket error\n");
+        exit(1);
+    }
+    return sockfdtemp;
+}
+
+/*
+ * This method gives the server information such as the port
+ * number specified by the user and the ip address. It allows
+ * the client to know information about the server so that the
+ * client can communicate with the server.
+ */
+void createServer(const char *ipaddr, const char *portnum){
+    int port;
+    //if(minimum > 0){
+        sscanf(portnum,"%d",&port);  //port number specified
+        bzero(&servaddr2, sizeof(servaddr2));
+        servaddr2.sin_family =hould be server-info.txt\n");
+            exit(EXIT_FAILURE);
+        }
+        thread_pnt[count].fp = fopen(filename,"r");
+        if (thread_pnt[count].fp == NULL){
+            perror("The file you are trying to open does not exist\n");
+            exit(1);
+        }
+        count++;
+    }
+
+    //set reader file pointer in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    char fileName2[200];
+    while (count <= minTemp){
+        sprintf(fileName2,"myReadingFilez");
+        sprintf(fileName2 + strlen(fileName2), "%d", (long) (count));
+        sprintf(thread_pnt[count].fileOnServer,fileName2); 
+        thread_pnt[count].reader = fopen(fileName2,"a");
+        bzero(fileName2,200);
+        count++;
+    }
+
+    //set counter in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    while(count <= minTemp){
+        thread_pnt[count].counter = count;
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        sprintf(thread_pnt[count].myFileName,fileOnServer);
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        thread_pnt[count].currentLoc = 0;
+        count++;
+    }
+    //thread_pnt[1].thread_id = 5;
+
+}
+
+void getFileSize(const char* fileName){
+
+    int sockfd = createSocket();
+    int recfd;
+
+    //Create the server with its info below
+    int port;
+    char ipAddr[1024]; //max length of ipaddress - used when opneing file
+    char portNumbr[1024]; //max length of portNumbr - used when opening file
+    if(fscanf(fp,"%s %s",ipAddr,portNumbr) > 0){
+        printf("%s %s \n",ipAddr,portNumbr);
+        if (strncmp(ipAddr,"localhost",9) == 0){
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, "127.0.0.1", &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }else{   
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, ipAddr, &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }        
+    }
+
+
+    //connect the the server's socket here
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+
+    sprintf(sendline,"filename");
+    sprintf(sendline + strlen(sendline),fileName);
+
+    if( send(sockfd , sendline , strlen(sendline) , 0) < 0)
+    {
+        perror("Send failed\n");
+        exit(1);     
+    } 
+
+
+    while( (recfd = recv(sockfd , recvline , MAXLINE , 0)) > 0)
+    {
+
+        if(strncmp(recvline,"sizeFile",8) == 0){
+            char subBuff[200];
+            memcpy(subBuff, &recvline[8], strlen(recvline));
+            fileSize = atoi(subBuff);
+            avgBytes = fileSize/minimum;
+            remainderBytes = fileSize%minimum;
+            bzero(recvline,MAXLINE);
+            break; 
+        }
+    }
+
+    close(sockfd);
+    rewind(fp);
+}
+
+/*
+ * This method actually tries to connect the client with the server
+ * by using the connect system call.
+ */ 
+void connectSocket(int sockfd){      
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+}
+
+/*
+ * Sets avg, total, and remainder in thread_ptr
+ */
+void setAvgEtc(){
+    int count = 1;
+    int minTemp = minimum - 1;
+    //can check avgbytes etc info here
+    //printf("avgBytes is: %d",avgBytes);
+    //printf("fileSize is: %d",fileSize);
+
+    thread_pnt[0].fileSize = fileSize;
+    thread_pnt[0].remainderBytes = remaindhould be server-info.txt\n");
+            exit(EXIT_FAILURE);
+        }
+        thread_pnt[count].fp = fopen(filename,"r");
+        if (thread_pnt[count].fp == NULL){
+            perror("The file you are trying to open does not exist\n");
+            exit(1);
+        }
+        count++;
+    }
+
+    //set reader file pointer in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    char fileName2[200];
+    while (count <= minTemp){
+        sprintf(fileName2,"myReadingFilez");
+        sprintf(fileName2 + strlen(fileName2), "%d", (long) (count));
+        sprintf(thread_pnt[count].fileOnServer,fileName2); 
+        thread_pnt[count].reader = fopen(fileName2,"a");
+        bzero(fileName2,200);
+        count++;
+    }
+
+    //set counter in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    while(count <= minTemp){
+        thread_pnt[count].counter = count;
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        sprintf(thread_pnt[count].myFileName,fileOnServer);
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        thread_pnt[count].currentLoc = 0;
+        count++;
+    }
+    //thread_pnt[1].thread_id = 5;
+
+}
+
+void getFileSize(const char* fileName){
+
+    int sockfd = createSocket();
+    int recfd;
+
+    //Create the server with its info below
+    int port;
+    char ipAddr[1024]; //max length of ipaddress - used when opneing file
+    char portNumbr[1024]; //max length of portNumbr - used when opening file
+    if(fscanf(fp,"%s %s",ipAddr,portNumbr) > 0){
+        printf("%s %s \n",ipAddr,portNumbr);
+        if (strncmp(ipAddr,"localhost",9) == 0){
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, "127.0.0.1", &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }else{   
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, ipAddr, &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }        
+    }
+
+
+    //connect the the server's socket here
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+
+    sprintf(sendline,"filename");
+    sprintf(sendline + strlen(sendline),fileName);
+
+    if( send(sockfd , sendline , strlen(sendline) , 0) < 0)
+    {
+        perror("Send failed\n");
+        exit(1);     
+    } 
+
+
+    while( (recfd = recv(sockfd , recvline , MAXLINE , 0)) > 0)
+    {
+
+        if(strncmp(recvline,"sizeFile",8) == 0){
+            char subBuff[200];
+            memcpy(subBuff, &recvline[8], strlen(recvline));
+            fileSize = atoi(subBuff);
+            avgBytes = fileSize/minimum;
+            remainderBytes = fileSize%minimum;
+            bzero(recvline,MAXLINE);
+            break; 
+        }
+    }
+
+    close(sockfd);
+    rewind(fp);
+}
+
+/*
+ * This method actually tries to connect the client with the server
+ * by using the connect system call.
+ */ 
+void connectSocket(int sockfd){      
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+}
+
+/*
+ * Sets avg, total, and remainder in thread_ptr
+ */
+void setAvgEtc(){
+    int count = 1;
+    int minTemp = minimum - 1;
+    //can check avgbytes etc info here
+    //printf("avgBytes is: %d",avgBytes);
+    //printf("fileSize is: %d",fileSize);
+
+    thread_pnt[0].fileSize = fileSize;
+    thread_pnt[0].remainderBytes = remaind#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>          
+#include <sys/socket.h>
+#include <strings.h>
+#include <unistd.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <string.h>
+#include <pthread.h>
+
+#define MAXLINE 4096 //size of buffer
+
+/*
+ * NOTE: All these global variables are not being used in the method
+ *       called by pthread_create
+ */
+//CHANGED MAXLINE + 1 to MAXLINE
+char    recvline[MAXLINE], sendline[1024]; //the recieve and send buffers
+struct sockaddr_in servaddr2; //the server address
+
+int minimum; //leave as global->not used with threads
+FILE *fp; //pointer to server list file, leave as global->not used with threads
+
+int fileSize = -1; //size of file that has book
+int remainderBytes = 0; //set as leftover bytes after dividing file size by minimum.
+                        //value is added to only first connection then set to 0
+int avgBytes = 0; //set as average number of bytes to send per connection
+/*
+ * A struct thread that will be used throughout this program to hold info about a thread
+ */
+typedef struct{
+    char recvline[MAXLINE + 1]; //finished setting
+    char sendline[1024]; //finished setting
+    int thread_id; //finished setting
+    FILE *reader; //used to create sep file to put recvbuff into
+    FILE *fp; //finished setting
+    //char ipAddr[1024]; //unneeded?
+    //char portNumbr[1024]; //uneeded?
+    int avgBytes; //finished setting
+    int remainderBytes; //finished setting
+    int minimum; //finished setting
+    int fileSize; //finished setting
+    //struct sockaddr_in servaddr; //the server address ---> may not need
+    int tempVal; //finished setting
+    int setFile; //finished setting
+    int counter; //finished setting
+    char myFileName[1024];
+    char fileOnServer[200];
+    char currentLoc;
+}Thread;
+
+//Thread pointer created -> pointer to an array of structs
+Thread *thread_pnt;
+pthread_t *thread_pnt2;
+/*
+ * This method checks to make sure that the number of 
+ * arguments is not invalid and above 3. It will
+ * throw an error otherwise.
+ */
+void numArgs(int argc){
+    if (argc != 4){
+        perror("usage: a.out <server-info.txt> <num-connections> <filename>\n");
+        exit(EXIT_FAILURE);
+    }
+}
+
+/*
+ * This method creates a socket on the client side so that
+ * the client can interact with the server on this socket.
+ * If a socket cannot be created, an error will be thrown. 
+ * If there is no error, the socket file descriptor 
+ * will be returned.
+ */
+int createSocket(){
+    int sockfdtemp = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfdtemp < 0){
+        perror("socket error\n");
+        exit(1);
+    }
+    return sockfdtemp;
+}
+
+/*
+ * This method gives the server information such as the port
+ * number specified by the user and the ip address. It allows
+ * the client to know information about the server so that the
+ * client can communicate with the server.
+ */
+void createServer(const char *ipaddr, const char *portnum){
+    int port;
+    //if(minimum > 0){
+        sscanf(portnum,"%d",&port);  //port number specified
+        bzero(&servaddr2, sizeof(servaddr2));
+        servaddr2.sin_family = Auld be server-info.txt\n");
+            exit(EXIT_FAILURE);
+        }
+        thread_pnt[count].fp = fopen(filename,"r");
+        if (thread_pnt[count].fp == NULL){
+            perror("The file you are trying to open does not exist\n");
+            exit(1);
+        }
+        count++;
+    }
+
+    //set reader file pointer in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    char fileName2[200];
+    while (count <= minTemp){
+        sprintf(fileName2,"myReadingFilez");
+        sprintf(fileName2 + strlen(fileName2), "%d", (long) (count));
+        sprintf(thread_pnt[count].fileOnServer,fileName2); 
+        thread_pnt[count].reader = fopen(fileName2,"a");
+        bzero(fileName2,200);
+        count++;
+    }
+
+    //set counter in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    while(count <= minTemp){
+        thread_pnt[count].counter = count;
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        sprintf(thread_pnt[count].myFileName,fileOnServer);
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        thread_pnt[count].currentLoc = 0;
+        count++;
+    }
+    //thread_pnt[1].thread_id = 5;
+
+}
+
+void getFileSize(const char* fileName){
+
+    int sockfd = createSocket();
+    int recfd;
+
+    //Create the server with its info below
+    int port;
+    char ipAddr[1024]; //max length of ipaddress - used when opneing file
+    char portNumbr[1024]; //max length of portNumbr - used when opening file
+    if(fscanf(fp,"%s %s",ipAddr,portNumbr) > 0){
+        printf("%s %s \n",ipAddr,portNumbr);
+        if (strncmp(ipAddr,"localhost",9) == 0){
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, "127.0.0.1", &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }else{   
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, ipAddr, &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }        
+    }
+
+
+    //connect the the server's socket here
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+
+    sprintf(sendline,"filename");
+    sprintf(sendline + strlen(sendline),fileName);
+
+    if( send(sockfd , sendline , strlen(sendline) , 0) < 0)
+    {
+        perror("Send failed\n");
+        exit(1);     
+    } 
+
+
+    while( (recfd = recv(sockfd , recvline , MAXLINE , 0)) > 0)
+    {
+
+        if(strncmp(recvline,"sizeFile",8) == 0){
+            char subBuff[200];
+            memcpy(subBuff, &recvline[8], strlen(recvline));
+            fileSize = atoi(subBuff);
+            avgBytes = fileSize/minimum;
+            remainderBytes = fileSize%minimum;
+            bzero(recvline,MAXLINE);
+            break; 
+        }
+    }
+
+    close(sockfd);
+    rewind(fp);
+}
+
+/*
+ * This method actually tries to connect the client with the server
+ * by using the connect system call.
+ */ 
+void connectSocket(int sockfd){      
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+}
+
+/*
+ * Sets avg, total, and remainder in thread_ptr
+ */
+void setAvgEtc(){
+    int count = 1;
+    int minTemp = minimum - 1;
+    //can check avgbytes etc info here
+    //printf("avgBytes is: %d",avgBytes);
+    //printf("fileSize is: %d",fileSize);
+
+    thread_pnt[0].fileSize = fileSize;
+    thread_pnt[0].remainderBytes = remainderuld be server-info.txt\n");
+            exit(EXIT_FAILURE);
+        }
+        thread_pnt[count].fp = fopen(filename,"r");
+        if (thread_pnt[count].fp == NULL){
+            perror("The file you are trying to open does not exist\n");
+            exit(1);
+        }
+        count++;
+    }
+
+    //set reader file pointer in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    char fileName2[200];
+    while (count <= minTemp){
+        sprintf(fileName2,"myReadingFilez");
+        sprintf(fileName2 + strlen(fileName2), "%d", (long) (count));
+        sprintf(thread_pnt[count].fileOnServer,fileName2); 
+        thread_pnt[count].reader = fopen(fileName2,"a");
+        bzero(fileName2,200);
+        count++;
+    }
+
+    //set counter in this set of code
+    count = 0;
+    minTemp = minimumTemp - 1;
+    while(count <= minTemp){
+        thread_pnt[count].counter = count;
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        sprintf(thread_pnt[count].myFileName,fileOnServer);
+        count++;
+    }
+
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        thread_pnt[count].currentLoc = 0;
+        count++;
+    }
+    //thread_pnt[1].thread_id = 5;
+
+}
+
+void getFileSize(const char* fileName){
+
+    int sockfd = createSocket();
+    int recfd;
+
+    //Create the server with its info below
+    int port;
+    char ipAddr[1024]; //max length of ipaddress - used when opneing file
+    char portNumbr[1024]; //max length of portNumbr - used when opening file
+    if(fscanf(fp,"%s %s",ipAddr,portNumbr) > 0){
+        printf("%s %s \n",ipAddr,portNumbr);
+        if (strncmp(ipAddr,"localhost",9) == 0){
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, "127.0.0.1", &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }else{   
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, ipAddr, &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }        
+    }
+
+
+    //connect the the server's socket here
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+
+    sprintf(sendline,"filename");
+    sprintf(sendline + strlen(sendline),fileName);
+
+    if( send(sockfd , sendline , strlen(sendline) , 0) < 0)
+    {
+        perror("Send failed\n");
+        exit(1);     
+    } 
+
+
+    while( (recfd = recv(sockfd , recvline , MAXLINE , 0)) > 0)
+    {
+
+        if(strncmp(recvline,"sizeFile",8) == 0){
+            char subBuff[200];
+            memcpy(subBuff, &recvline[8], strlen(recvline));
+            fileSize = atoi(subBuff);
+            avgBytes = fileSize/minimum;
+            remainderBytes = fileSize%minimum;
+            bzero(recvline,MAXLINE);
+            break; 
+        }
+    }
+
+    close(sockfd);
+    rewind(fp);
+}
+
+/*
+ * This method actually tries to connect the client with the server
+ * by using the connect system call.
+ */ 
+void connectSocket(int sockfd){      
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+        perror("connect error\n");
+        exit(1);
+    }
+}
+
+/*
+ * Sets avg, total, and remainder in thread_ptr
+ */
+void setAvgEtc(){
+    int count = 1;
+    int minTemp = minimum - 1;
+    //can check avgbytes etc info here
+    //printf("avgBytes is: %d",avgBytes);
+    //printf("fileSize is: %d",fileSize);
+
+    thread_pnt[0].fileSize = fileSize;
+    thread_pnt[0].remainderBytes = remainder#include <time.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>          
+#include <sys/socket.h>
+#include <strings.h>
+#include <unistd.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <string.h>
+
+#define MAXLINE2 4096 //size of bytes for the buffer
+#define LISTENQ 1024 //size of the listening queue of clients
+
+int     listenfd, connfd,read_size; //the listen and accept file desciptors
+struct sockaddr_in servaddr; //the server address
+char    recvBuff[MAXLINE2]; //the buffer which reads and sends lines
+char    sendBuff[MAXLINE2];
+time_t ticks; //ticks variable 
+int port; //server port number
+
+FILE *fileRead; 
+
+/*
+ * This method checks the number of arguments when running
+ * the server. It makes sure the number of arguments does
+ * not exceed 2. An error will be thrown otherwise.
+ */
+void numArgs(int argc){
+    if (argc != 2){
+        perror("usage: a.out <PORTnumber>\n");
+        exit(1);
+    }
+}
+
+/*
+ * This method creates a socket on the server. This
+ * is the socket that will be listened on and an error
+ * will be thrown if there is a problem creating
+ * this socket. If no error, the listenfd is returned.
+ */
+int createListenSocket(){
+    listenfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (listenfd < 0){
+        perror("socket error\n");
+        exit(1);
+    }
+    return listenfd;
+}
+
+/*
+ * This method initializes the characteristics of the 
+ * server and gives it the port number specified by the
+ * user.  
+ */
+void createServer(const char *portnum){
+    sscanf(portnum,"%d",&port); //converts portnum to int
+    bzero(&servaddr, sizeof(servaddr));
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    servaddr.sin_port = htons(port); //sets the port number here
+}
+
+/*
+ * This method binds the port using the listen file 
+ * descriptor. If there is an error with this process
+ * an error will be thrown. An error is thrown if that
+ * port is being used for other purposes.
+ */
+void bindServer(int listenfd){
+    int bindID = bind(listenfd, (struct sockaddr *) &servaddr, sizeof(servaddr));
+    if (bindID < 0){
+        perror("bind error\n");
+        exit(1);
+    } 
+}
+
+/*
+ * This method listend forever waiting for clients to connect
+ * to this server. When a client is connected it is added
+ * to the listen queue. An error is thrown otherwise.
+ */
+void listenServer(int listenfd){
+    int listenID = listen(listenfd, LISTENQ); //the listen queue is LISTENQ
+    if (listenID < 0){
+        perror("listen error\n");
+        exit(1);
+    } 
+}
+
+/*
+ * This method uses the accept system call which finds a diff
+ * port on the server for the client to communicate with.
+ * This is to allow other clients to communicate with the 
+ * server's port while the original client can still communicate 
+ * with the server. An error is thrown if a problem occurs.
+ */
+int acceptServer(int listenfd){
+        printf("connfd before is: %d\n",connfd);
+        connfd = accept(listenfd, (struct sockaddr *) NULL, NULL);
+        if (connfd < 0){
+            perror("accept error\n");
+            exit(1);
+        }
+        printf("connfd after is: %d\n",connfd); 
+        return connfd;
+}
+
+/*
+ * This method is the main meat of this program. It has an
+ * infinite while loop, that will continuously read input from
+ * the client and execute those commands that were sent to it.
+ * It does so by using the popen system call which basically
+ * opens a file and inputs the execution into it which later
+ * gets sent to a buffer. This buffer is then sent to the client
+ * who prints the output onto the screen.
+ */
+void readWriteServer(int connfd, int listenfd){
+int bytesToRead;
+int position;
+int sendfd;
+int setForExit;
+printf("got before bxeroing\n");
+bzero(recvBuff,MAXLINE2);
+bzero(sendBuff,MAXLINE2);
+printf("got here with no prob\n");
+  while( (read_size = recv(connfd , recvBuff , MAXLINE2 , 0)) > 0 )
+    {
+	//this int value will be used to ensure that
+	//that fgets doesnt get called twice when only is
+	//supposed to get called once
+
+        //if user enters nothing or for other cases like
+        //that, the if else send a message called 
+        //"empty" back to the client 
+        if(strncmp(recvBuff,"exit",4) == 0){
+              printf("Got into exit section\n");
+              sprintf(sendBuff,"exit");
+              write(connfd,sendBuff,strlen(sendBuff));
+              bzero(sendBuff,MAXLINE2);
+              fclose(fileRead);
+        }else if(strncmp(recvBuff,"filename",7) == 0){
+              printf("got into filename section: %s\n",recvBuff);
+              bzero(sendBuff,MAXLINE2);
+              char subBuff[200];
+              memcpy(subBuff, &recvBuff[8], strlen(recvBuff));
+              fileRead = fopen(subBuff,"r");
+              if (fileRead == NULL){
+                  perror("The file you are trying to read does not exist\n");
+                  exit(1);
+              }
+
+              /*
+               * Size of file being read set in global variable
+               */
+              fseek(fileRead,0L,SEEK_END);
+              int fileSize = ftell(fileRead);
+              rewind(fileRead);
+    
+              sprintf(sendBuff,"sizeFile");
+              sprintf(sendBuff + strlen(sendBuff),"%d",(long)fileSize); 
+              sendfd = write(connfd, sendBuff, strlen(sendBuff));
+              if(sendfd < 0){
+                perror("send error");
+                exit(1);
+              }
+              fclose(fileRead);
+              bzero(sendBuff,MAXLINE2); 
+              bzero(recvBuff,MAXLINE2);
+        }else if(strncmp(recvBuff,"openfile",7) == 0){
+              printf("got into filename section: %s\n",recvBuff);
+              bzero(sendBuff,MAXLINE2);
+              char subBuff5[200];
+              memcpy(subBuff5, &recvBuff[8], strlen(recvBuff));
+              fileRead = fopen(subBuff5,"r");
+              if (fileRead == NULL){
+                  perror("The file you are trying to read does not exist\n");
+                  exit(1);
+              }
+
+              bzero(sendBuff,MAXLINE2);
+              sprintf(sendBuff,"openFile2");
+              sendfd = write(connfd, sendBuff, strlen(sendBuff));
+              if(sendfd < 0){
+                perror("send error");
+            #include <time.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>          
+#include <sys/socket.h>
+#include <strings.h>
+#include <unistd.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <string.h>
+
+#define MAXLINE2 4096 //size of bytes for the buffer
+#define LISTENQ 1024 //size of the listening queue of clients
+
+int     listenfd, connfd,read_size; //the listen and accept file desciptors
+struct sockaddr_in servaddr; //the server address
+char    recvBuff[MAXLINE2]; //the buffer which reads and sends lines
+char    sendBuff[MAXLINE2];
+time_t ticks; //ticks variable 
+int port; //server port number
+
+FILE *fileRead; 
+
+/*
+ * This method checks the number of arguments when running
+ * the server. It makes sure the number of arguments does
+ * not exceed 2. An error will be thrown otherwise.
+ */
+void numArgs(int argc){
+    if (argc != 2){
+        perror("usage: a.out <PORTnumber>\n");
+        exit(1);
+    }
+}
+
+/*
+ * This method creates a socket on the server. This
+ * is the socket that will be listened on and an error
+ * will be thrown if there is a problem creating
+ * this socket. If no error, the listenfd is returned.
+ */
+int createListenSocket(){
+    listenfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (listenfd < 0){
+        perror("socket error\n");
+        exit(1);
+    }
+    return listenfd;
+}
+
+/*
+ * This method initializes the characteristics of the 
+ * server and gives it the port number specified by the
+ * user.  
+ */
+void createServer(const char *portnum){
+    sscanf(portnum,"%d",&port); //converts portnum to int
+    bzero(&servaddr, sizeof(servaddr));
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    servaddr.sin_port = htons(port); //sets the port number here
+}
+
+/*
+ * This method binds the port using the listen file 
+ * descriptor. If there is an error with this process
+ * an error will be thrown. An error is thrown if that
+ * port is being used for other purposes.
+ */
+void bindServer(int listenfd){
+    int bindID = bind(listenfd, (struct sockaddr *) &servaddr, sizeof(servaddr));
+    if (bindID < 0){
+        perror("bind error\n");
+        exit(1);
+    } 
+}
+
+/*
+ * This method listend forever waiting for clients to connect
+ * to this server. When a client is connected it is added
+ * to the listen queue. An error is thrown otherwise.
+ */
+void listenServer(int listenfd){
+    int listenID = listen(listenfd, LISTENQ); //the listen queue is LISTENQ
+    if (listenID < 0){
+        perror("listen error\n");
+        exit(1);
+    } 
+}
+
+/*
+ * This method uses the accept system call which finds a diff
+ * port on the server for the client to communicate with.
+ * This is to allow other clients to communicate with the 
+ * server's port while the original client can still communicate 
+ * with the server. An error is thrown if a problem occurs.
+ */
+int acceptServer(int listenfd){
+        printf("connfd before is: %d\n",connfd);
+        connfd = accept(listenfd, (struct sockaddr *) NULL, NULL);
+        if (connfd < 0){
+            perror("accept error\n");
+            exit(1);
+        }
+        printf("connfd after is: %d\n",connfd); 
+        return connfd;
+}
+
+/*
+ * This method is the main meat of this program. It has an
+ * infinite while loop, that will continuously read input from
+ * the client and execute those commands that were sent to it.
+ * It does so by using the popen system call which basically
+ * opens a file and inputs the execution into it which later
+ * gets sent to a buffer. This buffer is then sent to the client
+ * who prints the output onto the screen.
+ */
+void readWriteServer(int connfd, int listenfd){
+int bytesToRead;
+int position;
+int sendfd;
+int setForExit = 0;
+printf("got before bxeroing\n");
+bzero(recvBuff,MAXLINE2);
+bzero(sendBuff,MAXLINE2);
+printf("got here with no prob\n");
+  while( (read_size = recv(connfd , recvBuff , MAXLINE2 , 0)) > 0 )
+    {
+	//this int value will be used to ensure that
+	//that fgets doesnt get called twice when only is
+	//supposed to get called once
+
+        //if user enters nothing or for other cases like
+        //that, the if else send a message called 
+        //"empty" back to the client 
+        if(strncmp(recvBuff,"exit",4) == 0){
+              printf("Got into exit section\n");
+              sprintf(sendBuff,"exit");
+              write(connfd,sendBuff,strlen(sendBuff));
+              bzero(sendBuff,MAXLINE2);
+              fclose(fileRead);
+        }else if(strncmp(recvBuff,"filename",7) == 0){
+              printf("got into filename section: %s\n",recvBuff);
+              bzero(sendBuff,MAXLINE2);
+              char subBuff[200];
+              memcpy(subBuff, &recvBuff[8], strlen(recvBuff));
+              fileRead = fopen(subBuff,"r");
+              if (fileRead == NULL){
+                  perror("The file you are trying to read does not exist\n");
+                  exit(1);
+              }
+
+              /*
+               * Size of file being read set in global variable
+               */
+              fseek(fileRead,0L,SEEK_END);
+              int fileSize = ftell(fileRead);
+              rewind(fileRead);
+    
+              sprintf(sendBuff,"sizeFile");
+              sprintf(sendBuff + strlen(sendBuff),"%d",(long)fileSize); 
+              sendfd = write(connfd, sendBuff, strlen(sendBuff));
+              if(sendfd < 0){
+                perror("send error");
+                exit(1);
+              }
+              fclose(fileRead);
+              bzero(sendBuff,MAXLINE2); 
+              bzero(recvBuff,MAXLINE2);
+        }else if(strncmp(recvBuff,"openfile",7) == 0){
+              printf("got into filename section: %s\n",recvBuff);
+              bzero(sendBuff,MAXLINE2);
+              char subBuff5[200];
+              memcpy(subBuff5, &recvBuff[8], strlen(recvBuff));
+              fileRead = fopen(subBuff5,"r");
+              if (fileRead == NULL){
+                  perror("The file you are trying to read does not exist\n");
+                  exit(1);
+              }
+
+              bzero(sendBuff,MAXLINE2);
+              sprintf(sendBuff,"openFile2");
+              sendfd = write(connfd, sendBuff, strlen(sendBuff));
+              if(sendfd < 0){
+                perror("send error");
+          #include <time.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>          
+#include <sys/socket.h>
+#include <strings.h>
+#include <unistd.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <string.h>
+
+#define MAXLINE2 4096 //size of bytes for the buffer
+#define LISTENQ 1024 //size of the listening queue of clients
+
+int     listenfd, connfd,read_size; //the listen and accept file desciptors
+struct sockaddr_in servaddr; //the server address
+char    recvBuff[MAXLINE2]; //the buffer which reads and sends lines
+char    sendBuff[MAXLINE2];
+time_t ticks; //ticks variable 
+int port; //server port number
+
+FILE *fileRead; 
+
+/*
+ * This method checks the number of arguments when running
+ * the server. It makes sure the number of arguments does
+ * not exceed 2. An error will be thrown otherwise.
+ */
+void numArgs(int argc){
+    if (argc != 2){
+        perror("usage: a.out <PORTnumber>\n");
+        exit(1);
+    }
+}
+
+/*
+ * This method creates a socket on the server. This
+ * is the socket that will be listened on and an error
+ * will be thrown if there is a problem creating
+ * this socket. If no error, the listenfd is returned.
+ */
+int createListenSocket(){
+    listenfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (listenfd < 0){
+        perror("socket error\n");
+        exit(1);
+    }
+    return listenfd;
+}
+
+/*
+ * This method initializes the characteristics of the 
+ * server and gives it the port number specified by the
+ * user.  
+ */
+void createServer(const char *portnum){
+    sscanf(portnum,"%d",&port); //converts portnum to int
+    bzero(&servaddr, sizeof(servaddr));
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    servaddr.sin_port = htons(port); //sets the port number here
+}
+
+/*
+ * This method binds the port using the listen file 
+ * descriptor. If there is an error with this process
+ * an error will be thrown. An error is thrown if that
+ * port is being used for other purposes.
+ */
+void bindServer(int listenfd){
+    int bindID = bind(listenfd, (struct sockaddr *) &servaddr, sizeof(servaddr));
+    if (bindID < 0){
+        perror("bind error\n");
+        exit(1);
+    } 
+}
+
+/*
+ * This method listend forever waiting for clients to connect
+ * to this server. When a client is connected it is added
+ * to the listen queue. An error is thrown otherwise.
+ */
+void listenServer(int listenfd){
+    int listenID = listen(listenfd, LISTENQ); //the listen queue is LISTENQ
+    if (listenID < 0){
+        perror("listen error\n");
+        exit(1);
+    } 
+}
+
+/*
+ * This method uses the accept system call which finds a diff
+ * port on the server for the client to communicate with.
+ * This is to allow other clients to communicate with the 
+ * server's port while the original client can still communicate 
+ * with the server. An error is thrown if a problem occurs.
+ */
+int acceptServer(int listenfd){
+        printf("connfd before is: %d\n",connfd);
+        connfd = accept(listenfd, (struct sockaddr *) NULL, NULL);
+        if (connfd < 0){
+            perror("accept error\n");
+            exit(1);
+        }
+        printf("connfd after is: %d\n",connfd); 
+        return connfd;
+}
+
+/*
+ * This method is the main meat of this program. It has an
+ * infinite while loop, that will continuously read input from
+ * the client and execute those commands that were sent to it.
+ * It does so by using the popen system call which basically
+ * opens a file and inputs the execution into it which later
+ * gets sent to a buffer. This buffer is then sent to the client
+ * who prints the output onto the screen.
+ */
+void readWriteServer(int connfd, int listenfd){
+int bytesToRead;
+int position;
+int sendfd;
+int setForExit = 0;
+printf("got before bxeroing\n");
+bzero(recvBuff,MAXLINE2);
+bzero(sendBuff,MAXLINE2);
+printf("got here with no prob\n");
+  while( (read_size = recv(connfd , recvBuff , MAXLINE2 , 0)) > 0 )
+    {
+	//this int value will be used to ensure that
+	//that fgets doesnt get called twice when only is
+	//supposed to get called once
+
+        //if user enters nothing or for other cases like
+        //that, the if else send a message called 
+        //"empty" back to the client 
+        if(strncmp(recvBuff,"exit",4) == 0){
+              printf("Got into exit section\n");
+              sprintf(sendBuff,"exit");
+              write(connfd,sendBuff,strlen(sendBuff));
+              bzero(sendBuff,MAXLINE2);
+              fclose(fileRead);
+        }else if(strncmp(recvBuff,"filename",7) == 0){
+              printf("got into filename section: %s\n",recvBuff);
+              bzero(sendBuff,MAXLINE2);
+              char subBuff[200];
+              memcpy(subBuff, &recvBuff[8], strlen(recvBuff));
+              fileRead = fopen(subBuff,"r");
+              if (fileRead == NULL){
+                  perror("The file you are trying to read does not exist\n");
+                  exit(1);
+              }
+
+              /*
+               * Size of file being read set in global variable
+               */
+              fseek(fileRead,0L,SEEK_END);
+              int fileSize = ftell(fileRead);
+              rewind(fileRead);
+    
+              sprintf(sendBuff,"sizeFile");
+              sprintf(sendBuff + strlen(sendBuff),"%d",(long)fileSize); 
+              sendfd = write(connfd, sendBuff, strlen(sendBuff));
+              if(sendfd < 0){
+                perror("send error");
+                exit(1);
+              }
+              fclose(fileRead);
+              bzero(sendBuff,MAXLINE2); 
+              bzero(recvBuff,MAXLINE2);
+        }else if(strncmp(recvBuff,"openfile",7) == 0){
+              printf("got into filename section: %s\n",recvBuff);
+              bzero(sendBuff,MAXLINE2);
+              char subBuff5[200];
+              memcpy(subBuff5, &recvBuff[8], strlen(recvBuff));
+              fileRead = fopen(subBuff5,"r");
+              if (fileRead == NULL){
+                  perror("The file you are trying to read does not exist\n");
+                  exit(1);
+              }
+
+              bzero(sendBuff,MAXLINE2);
+              sprintf(sendBuff,"openFile2");
+              sendfd = write(connfd, sendBuff, strlen(sendBuff));
+              if(sendfd < 0){
+                perror("send error");
+          #include <time.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>          
+#include <sys/socket.h>
+#include <strings.h>
+#include <unistd.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <string.h>
+
+#define MAXLINE2 4096 //size of bytes for the buffer
+#define LISTENQ 1024 //size of the listening queue of clients
+
+int     listenfd, connfd,read_size; //the listen and accept file desciptors
+struct sockaddr_in servaddr; //the server address
+char    recvBuff[MAXLINE2]; //the buffer which reads and sends lines
+char    sendBuff[MAXLINE2];
+time_t ticks; //ticks variable 
+int port; //server port number
+
+FILE *fileRead; 
+
+/*
+ * This method checks the number of arguments when running
+ * the server. It makes sure the number of arguments does
+ * not exceed 2. An error will be thrown otherwise.
+ */
+void numArgs(int argc){
+    if (argc != 2){
+        perror("usage: a.out <PORTnumber>\n");
+        exit(1);
+    }
+}
+
+/*
+ * This method creates a socket on the server. This
+ * is the socket that will be listened on and an error
+ * will be thrown if there is a problem creating
+ * this socket. If no error, the listenfd is returned.
+ */
+int createListenSocket(){
+    listenfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (listenfd < 0){
+        perror("socket error\n");
+        exit(1);
+    }
+    return listenfd;
+}
+
+/*
+ * This method initializes the characteristics of the 
+ * server and gives it the port number specified by the
+ * user.  
+ */
+void createServer(const char *portnum){
+    sscanf(portnum,"%d",&port); //converts portnum to int
+    bzero(&servaddr, sizeof(servaddr));
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    servaddr.sin_port = htons(port); //sets the port number here
+}
+
+/*
+ * This method binds the port using the listen file 
+ * descriptor. If there is an error with this process
+ * an error will be thrown. An error is thrown if that
+ * port is being used for other purposes.
+ */
+void bindServer(int listenfd){
+    int bindID = bind(listenfd, (struct sockaddr *) &servaddr, sizeof(servaddr));
+    if (bindID < 0){
+        perror("bind error\n");
+        exit(1);
+    } 
+}
+
+/*
+ * This method listend forever waiting for clients to connect
+ * to this server. When a client is connected it is added
+ * to the listen queue. An error is thrown otherwise.
+ */
+void listenServer(int listenfd){
+    int listenID = listen(listenfd, LISTENQ); //the listen queue is LISTENQ
+    if (listenID < 0){
+        perror("listen error\n");
+        exit(1);
+    } 
+}
+
+/*
+ * This method uses the accept system call which finds a diff
+ * port on the server for the client to communicate with.
+ * This is to allow other clients to communicate with the 
+ * server's port while the original client can still communicate 
+ * with the server. An error is thrown if a problem occurs.
+ */
+int acceptServer(int listenfd){
+        printf("connfd before is: %d\n",connfd);
+        connfd = accept(listenfd, (struct sockaddr *) NULL, NULL);
+        if (connfd < 0){
+            perror("accept error\n");
+            exit(1);
+        }
+        printf("connfd after is: %d\n",connfd); 
+        return connfd;
+}
+
+/*
+ * This method is the main meat of this program. It has an
+ * infinite while loop, that will continuously read input from
+ * the client and execute those commands that were sent to it.
+ * It does so by using the popen system call which basically
+ * opens a file and inputs the execution into it which later
+ * gets sent to a buffer. This buffer is then sent to the client
+ * who prints the output onto the screen.
+ */
+void readWriteServer(int connfd, int listenfd){
+int bytesToRead;
+int position;
+int sendfd;
+int setForExit = 0;
+printf("got before bxeroing\n");
+bzero(recvBuff,MAXLINE2);
+bzero(sendBuff,MAXLINE2);
+printf("got here with no prob\n");
+  while( (read_size = recv(connfd , recvBuff , MAXLINE2 , 0)) > 0 )
+    {
+	//this int value will be used to ensure that
+	//that fgets doesnt get called twice when only is
+	//supposed to get called once
+
+        //if user enters nothing or for other cases like
+        //that, the if else send a message called 
+        //"empty" back to the client 
+        if(strncmp(recvBuff,"exit",4) == 0){
+              printf("Got into exit section\n");
+              sprintf(sendBuff,"exit");
+              write(connfd,sendBuff,strlen(sendBuff));
+              bzero(sendBuff,MAXLINE2);
+              fclose(fileRead);
+        }else if(strncmp(recvBuff,"filename",7) == 0){
+              printf("got into filename section: %s\n",recvBuff);
+              bzero(sendBuff,MAXLINE2);
+              char subBuff[200];
+              memcpy(subBuff, &recvBuff[8], strlen(recvBuff));
+              fileRead = fopen(subBuff,"r");
+              if (fileRead == NULL){
+                  perror("The file you are trying to read does not exist\n");
+                  exit(1);
+              }
+
+              /*
+               * Size of file being read set in global variable
+               */
+              fseek(fileRead,0L,SEEK_END);
+              int fileSize = ftell(fileRead);
+              rewind(fileRead);
+    
+              sprintf(sendBuff,"sizeFile");
+              sprintf(sendBuff + strlen(sendBuff),"%d",(long)fileSize); 
+              sendfd = write(connfd, sendBuff, strlen(sendBuff));
+              if(sendfd < 0){
+                perror("send error");
+                exit(1);
+              }
+              fclose(fileRead);
+              bzero(sendBuff,MAXLINE2); 
+              bzero(recvBuff,MAXLINE2);
+        }else if(strncmp(recvBuff,"openfile",7) == 0){
+              printf("got into filename section: %s\n",recvBuff);
+              bzero(sendBuff,MAXLINE2);
+              char subBuff5[200];
+              memcpy(subBuff5, &recvBuff[8], strlen(recvBuff));
+              fileRead = fopen(subBuff5,"r");
+              if (fileRead == NULL){
+                  perror("The file you are trying to read does not exist\n");
+                  exit(1);
+              }
+
+              bzero(sendBuff,MAXLINE2);
+              sprintf(sendBuff,"openFile2");
+              sendfd = write(connfd, sendBuff, strlen(sendBuff));
+              if(sendfd < 0){
+                perror("send error");
+          #include <time.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>          
+#include <sys/socket.h>
+#include <strings.h>
+#include <unistd.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <string.h>
+
+#define MAXLINE2 4096 //size of bytes for the buffer
+#define LISTENQ 1024 //size of the listening queue of clients
+
+int     listenfd, connfd,read_size; //the listen and accept file desciptors
+struct sockaddr_in servaddr; //the server address
+char    recvBuff[MAXLINE2]; //the buffer which reads and sends lines
+char    sendBuff[MAXLINE2];
+time_t ticks; //ticks variable 
+int port; //server port number
+
+FILE *fileRead; 
+
+/*
+ * This method checks the number of arguments when running
+ * the server. It makes sure the number of arguments does
+ * not exceed 2. An error will be thrown otherwise.
+ */
+void numArgs(int argc){
+    if (argc != 2){
+        perror("usage: a.out <PORTnumber>\n");
+        exit(1);
+    }
+}
+
+/*
+ * This method creates a socket on the server. This
+ * is the socket that will be listened on and an error
+ * will be thrown if there is a problem creating
+ * this socket. If no error, the listenfd is returned.
+ */
+int createListenSocket(){
+    listenfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (listenfd < 0){
+        perror("socket error\n");
+        exit(1);
+    }
+    return listenfd;
+}
+
+/*
+ * This method initializes the characteristics of the 
+ * server and gives it the port number specified by the
+ * user.  
+ */
+void createServer(const char *portnum){
+    sscanf(portnum,"%d",&port); //converts portnum to int
+    bzero(&servaddr, sizeof(servaddr));
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    servaddr.sin_port = htons(port); //sets the port number here
+}
+
+/*
+ * This method binds the port using the listen file 
+ * descriptor. If there is an error with this process
+ * an error will be thrown. An error is thrown if that
+ * port is being used for other purposes.
+ */
+void bindServer(int listenfd){
+    int bindID = bind(listenfd, (struct sockaddr *) &servaddr, sizeof(servaddr));
+    if (bindID < 0){
+        perror("bind error\n");
+        exit(1);
+    } 
+}
+
+/*
+ * This method listend forever waiting for clients to connect
+ * to this server. When a client is connected it is added
+ * to the listen queue. An error is thrown otherwise.
+ */
+void listenServer(int listenfd){
+    int listenID = listen(listenfd, LISTENQ); //the listen queue is LISTENQ
+    if (listenID < 0){
+        perror("listen error\n");
+        exit(1);
+    } 
+}
+
+/*
+ * This method uses the accept system call which finds a diff
+ * port on the server for the client to communicate with.
+ * This is to allow other clients to communicate with the 
+ * server's port while the original client can still communicate 
+ * with the server. An error is thrown if a problem occurs.
+ */
+int acceptServer(int listenfd){
+        printf("connfd before is: %d\n",connfd);
+        connfd = accept(listenfd, (struct sockaddr *) NULL, NULL);
+        if (connfd < 0){
+            perror("accept error\n");
+            exit(1);
+        }
+        printf("connfd after is: %d\n",connfd); 
+        return connfd;
+}
+
+/*
+ * This method is the main meat of this program. It has an
+ * infinite while loop, that will continuously read input from
+ * the client and execute those commands that were sent to it.
+ * It does so by using the popen system call which basically
+ * opens a file and inputs the execution into it which later
+ * gets sent to a buffer. This buffer is then sent to the client
+ * who prints the output onto the screen.
+ */
+void readWriteServer(int connfd, int listenfd){
+int bytesToRead;
+int position;
+int sendfd;
+int setForExit = 0;
+printf("got before bxeroing\n");
+bzero(recvBuff,MAXLINE2);
+bzero(sendBuff,MAXLINE2);
+printf("got here with no prob\n");
+  while( (read_size = recv(connfd , recvBuff , MAXLINE2 , 0)) > 0 )
+    {
+	//this int value will be used to ensure that
+	//that fgets doesnt get called twice when only is
+	//supposed to get called once
+
+        //if user enters nothing or for other cases like
+        //that, the if else send a message called 
+        //"empty" back to the client 
+        if(strncmp(recvBuff,"exit",4) == 0){
+              printf("Got into exit section\n");
+              sprintf(sendBuff,"exit");
+              bzero(recvBuff,MAXLINE2);
+              write(connfd,sendBuff,strlen(sendBuff));
+              bzero(sendBuff,MAXLINE2);
+              fclose(fileRead);
+        }else if(strncmp(recvBuff,"filename",7) == 0){
+              printf("got into filename section: %s\n",recvBuff);
+              bzero(sendBuff,MAXLINE2);
+              char subBuff[200];
+              memcpy(subBuff, &recvBuff[8], strlen(recvBuff));
+              fileRead = fopen(subBuff,"r");
+              if (fileRead == NULL){
+                  perror("The file you are trying to read does not exist\n");
+                  exit(1);
+              }
+
+              /*
+               * Size of file being read set in global variable
+               */
+              fseek(fileRead,0L,SEEK_END);
+              int fileSize = ftell(fileRead);
+              rewind(fileRead);
+        
+              bzero(recvBuff,MAXLINE2);
+    
+              sprintf(sendBuff,"sizeFile");
+              sprintf(sendBuff + strlen(sendBuff),"%d",(long)fileSize); 
+              sendfd = write(connfd, sendBuff, strlen(sendBuff));
+              if(sendfd < 0){
+                perror("send error");
+                exit(1);
+              }
+              fclose(fileRead);
+              bzero(sendBuff,MAXLINE2); 
+              bzero(recvBuff,MAXLINE2);
+        }else if(strncmp(recvBuff,"openfile",7) == 0){
+              printf("got into filename section: %s\n",recvBuff);
+              bzero(sendBuff,MAXLINE2);
+              char subBuff5[200];
+              memcpy(subBuff5, &recvBuff[8], strlen(recvBuff));
+              fileRead = fopen(subBuff5,"r");
+              if (fileRead == NULL){
+                  perror("The file you are trying to read does not exist\n");
+                  exit(1);
+              }
+            
+              bzero(recvBuff,MAXLINE2);
+              bzero(sendBuff,MAXLINE2);
+              sprintf(sendBuff,"openFile2");
+              sendfd = write(connfd, sendBuff, strlen(sendBuff));
+              if(sendfd < 0)#include <time.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>          
+#include <sys/socket.h>
+#include <strings.h>
+#include <unistd.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <string.h>
+
+#define MAXLINE2 4096 //size of bytes for the buffer
+#define LISTENQ 1024 //size of the listening queue of clients
+
+int     listenfd, connfd,read_size; //the listen and accept file desciptors
+struct sockaddr_in servaddr; //the server address
+char    recvBuff[MAXLINE2]; //the buffer which reads and sends lines
+char    sendBuff[MAXLINE2];
+time_t ticks; //ticks variable 
+int port; //server port number
+
+FILE *fileRead; 
+
+/*
+ * This method checks the number of arguments when running
+ * the server. It makes sure the number of arguments does
+ * not exceed 2. An error will be thrown otherwise.
+ */
+void numArgs(int argc){
+    if (argc != 2){
+        perror("usage: a.out <PORTnumber>\n");
+        exit(1);
+    }
+}
+
+/*
+ * This method creates a socket on the server. This
+ * is the socket that will be listened on and an error
+ * will be thrown if there is a problem creating
+ * this socket. If no error, the listenfd is returned.
+ */
+int createListenSocket(){
+    listenfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (listenfd < 0){
+        perror("socket error\n");
+        exit(1);
+    }
+    return listenfd;
+}
+
+/*
+ * This method initializes the characteristics of the 
+ * server and gives it the port number specified by the
+ * user.  
+ */
+void createServer(const char *portnum){
+    sscanf(portnum,"%d",&port); //converts portnum to int
+    bzero(&servaddr, sizeof(servaddr));
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    servaddr.sin_port = htons(port); //sets the port number here
+}
+
+/*
+ * This method binds the port using the listen file 
+ * descriptor. If there is an error with this process
+ * an error will be thrown. An error is thrown if that
+ * port is being used for other purposes.
+ */
+void bindServer(int listenfd){
+    int bindID = bind(listenfd, (struct sockaddr *) &servaddr, sizeof(servaddr));
+    if (bindID < 0){
+        perror("bind error\n");
+        exit(1);
+    } 
+}
+
+/*
+ * This method listend forever waiting for clients to connect
+ * to this server. When a client is connected it is added
+ * to the listen queue. An error is thrown otherwise.
+ */
+void listenServer(int listenfd){
+    int listenID = listen(listenfd, LISTENQ); //the listen queue is LISTENQ
+    if (listenID < 0){
+        perror("listen error\n");
+        exit(1);
+    } 
+}
+
+/*
+ * This method uses the accept system call which finds a diff
+ * port on the server for the client to communicate with.
+ * This is to allow other clients to communicate with the 
+ * server's port while the original client can still communicate 
+ * with the server. An error is thrown if a problem occurs.
+ */
+int acceptServer(int listenfd){
+        printf("connfd before is: %d\n",connfd);
+        connfd = accept(listenfd, (struct sockaddr *) NULL, NULL);
+        if (connfd < 0){
+            perror("accept error\n");
+            exit(1);
+        }
+        printf("connfd after is: %d\n",connfd); 
+        return connfd;
+}
+
+/*
+ * This method is the main meat of this program. It has an
+ * infinite while loop, that will continuously read input from
+ * the client and execute those commands that were sent to it.
+ * It does so by using the popen system call which basically
+ * opens a file and inputs the execution into it which later
+ * gets sent to a buffer. This buffer is then sent to the client
+ * who prints the output onto the screen.
+ */
+void readWriteServer(int connfd, int listenfd){
+int bytesToRead;
+int position;
+int sendfd;
+int setForExit = 0;
+printf("got before bxeroing\n");
+bzero(recvBuff,MAXLINE2);
+bzero(sendBuff,MAXLINE2);
+printf("got here with no prob\n");
+  while( (read_size = recv(connfd , recvBuff , MAXLINE2 , 0)) > 0 )
+    {
+	//this int value will be used to ensure that
+	//that fgets doesnt get called twice when only is
+	//supposed to get called once
+
+        //if user enters nothing or for other cases like
+        //that, the if else send a message called 
+        //"empty" back to the client 
+        if(strncmp(recvBuff,"exit",4) == 0){
+              printf("Got into exit section\n");
+              sprintf(sendBuff,"exit");
+              bzero(recvBuff,MAXLINE2);
+              write(connfd,sendBuff,strlen(sendBuff));
+              bzero(sendBuff,MAXLINE2);
+              fclose(fileRead);
+        }else if(strncmp(recvBuff,"filename",7) == 0){
+              printf("got into filename section: %s\n",recvBuff);
+              bzero(sendBuff,MAXLINE2);
+              char subBuff[200];
+              memcpy(subBuff, &recvBuff[8], strlen(recvBuff));
+              fileRead = fopen(subBuff,"r");
+              if (fileRead == NULL){
+                  perror("The file you are trying to read does not exist\n");
+                  exit(1);
+              }
+
+              /*
+               * Size of file being read set in global variable
+               */
+              fseek(fileRead,0L,SEEK_END);
+              int fileSize = ftell(fileRead);
+              rewind(fileRead);
+        
+              bzero(recvBuff,MAXLINE2);
+    
+              sprintf(sendBuff,"sizeFile");
+              sprintf(sendBuff + strlen(sendBuff),"%d",(long)fileSize); 
+              sendfd = write(connfd, sendBuff, strlen(sendBuff));
+              if(sendfd < 0){
+                perror("send error");
+                exit(1);
+              }
+              fclose(fileRead);
+              bzero(sendBuff,MAXLINE2); 
+              bzero(recvBuff,MAXLINE2);
+        }else if(strncmp(recvBuff,"openfile",7) == 0){
+              printf("got into filename section: %s\n",recvBuff);
+              bzero(sendBuff,MAXLINE2);
+              char subBuff5[4097];
+              memcpy(subBuff5, &recvBuff[8], strlen(recvBuff));
+              fileRead = fopen(subBuff5,"r");
+              if (fileRead == NULL){
+                  perror("The file you are trying to read does not exist\n");
+                  exit(1);
+              }
+            
+              bzero(recvBuff,MAXLINE2);
+              bzero(sendBuff,MAXLINE2);
+              sprintf(sendBuff,"openFile2");
+              sendfd = write(connfd, sendBuff, strlen(sendBuff));
+              if(sendfd < 0)#include <time.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>          
+#include <sys/socket.h>
+#include <strings.h>
+#include <unistd.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <string.h>
+
+#define MAXLINE2 4096 //size of bytes for the buffer
+#define LISTENQ 1024 //size of the listening queue of clients
+
+int     listenfd, connfd,read_size; //the listen and accept file desciptors
+struct sockaddr_in servaddr; //the server address
+char    recvBuff[MAXLINE2]; //the buffer which reads and sends lines
+char    sendBuff[MAXLINE2];
+time_t ticks; //ticks variable 
+int port; //server port number
+
+FILE *fileRead; 
+
+/*
+ * This method checks the number of arguments when running
+ * the server. It makes sure the number of arguments does
+ * not exceed 2. An error will be thrown otherwise.
+ */
+void numArgs(int argc){
+    if (argc != 2){
+        perror("usage: a.out <PORTnumber>\n");
+        exit(1);
+    }
+}
+
+/*
+ * This method creates a socket on the server. This
+ * is the socket that will be listened on and an error
+ * will be thrown if there is a problem creating
+ * this socket. If no error, the listenfd is returned.
+ */
+int createListenSocket(){
+    listenfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (listenfd < 0){
+        perror("socket error\n");
+        exit(1);
+    }
+    return listenfd;
+}
+
+/*
+ * This method initializes the characteristics of the 
+ * server and gives it the port number specified by the
+ * user.  
+ */
+void createServer(const char *portnum){
+    sscanf(portnum,"%d",&port); //converts portnum to int
+    bzero(&servaddr, sizeof(servaddr));
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    servaddr.sin_port = htons(port); //sets the port number here
+}
+
+/*
+ * This method binds the port using the listen file 
+ * descriptor. If there is an error with this process
+ * an error will be thrown. An error is thrown if that
+ * port is being used for other purposes.
+ */
+void bindServer(int listenfd){
+    int bindID = bind(listenfd, (struct sockaddr *) &servaddr, sizeof(servaddr));
+    if (bindID < 0){
+        perror("bind error\n");
+        exit(1);
+    } 
+}
+
+/*
+ * This method listend forever waiting for clients to connect
+ * to this server. When a client is connected it is added
+ * to the listen queue. An error is thrown otherwise.
+ */
+void listenServer(int listenfd){
+    int listenID = listen(listenfd, LISTENQ); //the listen queue is LISTENQ
+    if (listenID < 0){
+        perror("listen error\n");
+        exit(1);
+    } 
+}
+
+/*
+ * This method uses the accept system call which finds a diff
+ * port on the server for the client to communicate with.
+ * This is to allow other clients to communicate with the 
+ * server's port while the original client can still communicate 
+ * with the server. An error is thrown if a problem occurs.
+ */
+int acceptServer(int listenfd){
+        printf("connfd before is: %d\n",connfd);
+        connfd = accept(listenfd, (struct sockaddr *) NULL, NULL);
+        if (connfd < 0){
+            perror("accept error\n");
+            exit(1);
+        }
+        printf("connfd after is: %d\n",connfd); 
+        return connfd;
+}
+
+/*
+ * This method is the main meat of this program. It has an
+ * infinite while loop, that will continuously read input from
+ * the client and execute those commands that were sent to it.
+ * It does so by using the popen system call which basically
+ * opens a file and inputs the execution into it which later
+ * gets sent to a buffer. This buffer is then sent to the client
+ * who prints the output onto the screen.
+ */
+void readWriteServer(int connfd, int listenfd){
+int bytesToRead;
+int position;
+int sendfd;
+int setForExit = 0;
+printf("got before bxeroing\n");
+bzero(recvBuff,MAXLINE2);
+bzero(sendBuff,MAXLINE2);
+printf("got here with no prob\n");
+  while( (read_size = recv(connfd , recvBuff , MAXLINE2 , 0)) > 0 )
+    {
+	//this int value will be used to ensure that
+	//that fgets doesnt get called twice when only is
+	//supposed to get called once
+
+        //if user enters nothing or for other cases like
+        //that, the if else send a message called 
+        //"empty" back to the client 
+        if(strncmp(recvBuff,"exit",4) == 0){
+              printf("Got into exit section\n");
+              sprintf(sendBuff,"exit");
+              bzero(recvBuff,MAXLINE2);
+              write(connfd,sendBuff,strlen(sendBuff));
+              bzero(sendBuff,MAXLINE2);
+              fclose(fileRead);
+        }else if(strncmp(recvBuff,"filename",7) == 0){
+              printf("got into filename section: %s\n",recvBuff);
+              bzero(sendBuff,MAXLINE2);
+              char subBuff[200];
+              memcpy(subBuff, &recvBuff[8], strlen(recvBuff));
+              fileRead = fopen(subBuff,"r");
+              if (fileRead == NULL){
+                  perror("The file you are trying to read does not exist\n");
+                  exit(1);
+              }
+
+              /*
+               * Size of file being read set in global variable
+               */
+              fseek(fileRead,0L,SEEK_END);
+              int fileSize = ftell(fileRead);
+              rewind(fileRead);
+        
+              bzero(recvBuff,MAXLINE2);
+    
+              sprintf(sendBuff,"sizeFile");
+              sprintf(sendBuff + strlen(sendBuff),"%d",(long)fileSize); 
+              sendfd = write(connfd, sendBuff, strlen(sendBuff));
+              if(sendfd < 0){
+                perror("send error");
+                exit(1);
+              }
+              fclose(fileRead);
+              bzero(sendBuff,MAXLINE2); 
+              bzero(recvBuff,MAXLINE2);
+        }else if(strncmp(recvBuff,"openfile",7) == 0){
+              printf("got into filename section: %s\n",recvBuff);
+              bzero(sendBuff,MAXLINE2);
+              char subBuff5[4097];
+              memcpy(subBuff5, &recvBuff[8], strlen(recvBuff));
+              fileRead = fopen(subBuff5,"r");
+              if (fileRead == NULL){
+                  perror("The file you are trying to read does not exist\n");
+                  exit(1);
+              }
+            
+              bzero(recvBuff,MAXLINE2);
+              bzero(sendBuff,MAXLINE2);
+              sprintf(sendBuff,"openFile2");
+              sendfd = write(connfd, sendBuff, strlen(sendBuff));
+              if(sendfd < 0)

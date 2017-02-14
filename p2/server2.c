@@ -15,7 +15,7 @@
 int     listenfd, connfd,read_size; //the listen and accept file desciptors
 struct sockaddr_in servaddr; //the server address
 char    recvBuff[MAXLINE2]; //the buffer which reads and sends lines
-char    sendBuff[MAXLINE2 + 1];
+char    sendBuff[MAXLINE2];
 time_t ticks; //ticks variable 
 int port; //server port number
 
@@ -119,9 +119,11 @@ void readWriteServer(int connfd, int listenfd){
 int bytesToRead;
 int position;
 int sendfd;
-int setForExit;
+int setForExit = 0;
+printf("got before bxeroing\n");
 bzero(recvBuff,MAXLINE2);
 bzero(sendBuff,MAXLINE2);
+printf("got here with no prob\n");
   while( (read_size = recv(connfd , recvBuff , MAXLINE2 , 0)) > 0 )
     {
 	//this int value will be used to ensure that
@@ -134,6 +136,7 @@ bzero(sendBuff,MAXLINE2);
         if(strncmp(recvBuff,"exit",4) == 0){
               printf("Got into exit section\n");
               sprintf(sendBuff,"exit");
+              bzero(recvBuff,MAXLINE2);
               write(connfd,sendBuff,strlen(sendBuff));
               bzero(sendBuff,MAXLINE2);
               fclose(fileRead);
@@ -154,6 +157,8 @@ bzero(sendBuff,MAXLINE2);
               fseek(fileRead,0L,SEEK_END);
               int fileSize = ftell(fileRead);
               rewind(fileRead);
+        
+              bzero(recvBuff,MAXLINE2);
     
               sprintf(sendBuff,"sizeFile");
               sprintf(sendBuff + strlen(sendBuff),"%d",(long)fileSize); 
@@ -168,14 +173,15 @@ bzero(sendBuff,MAXLINE2);
         }else if(strncmp(recvBuff,"openfile",7) == 0){
               printf("got into filename section: %s\n",recvBuff);
               bzero(sendBuff,MAXLINE2);
-              char subBuff5[200];
+              char subBuff5[4097];
               memcpy(subBuff5, &recvBuff[8], strlen(recvBuff));
               fileRead = fopen(subBuff5,"r");
               if (fileRead == NULL){
                   perror("The file you are trying to read does not exist\n");
                   exit(1);
               }
-
+            
+              bzero(recvBuff,MAXLINE2);
               bzero(sendBuff,MAXLINE2);
               sprintf(sendBuff,"openFile2");
               sendfd = write(connfd, sendBuff, strlen(sendBuff));
@@ -190,9 +196,11 @@ bzero(sendBuff,MAXLINE2);
         }else if(strncmp(recvBuff,"size",4) == 0){
               printf("the recvbuff in size is: %s\n",recvBuff);
               bzero(sendBuff,MAXLINE2);
-              char subBuff2[200];
+              char subBuff2[4097];
               memcpy(subBuff2, &recvBuff[4], strlen(recvBuff));
               bytesToRead = atoi(subBuff2);
+
+              bzero(recvBuff,MAXLINE2);
 
               sprintf(sendBuff,"needPos");
               sendfd = write(connfd, sendBuff, strlen(sendBuff));
@@ -204,7 +212,7 @@ bzero(sendBuff,MAXLINE2);
               bzero(recvBuff,MAXLINE2);
         }else if(strncmp(recvBuff,"position",8) == 0){
               bzero(sendBuff,MAXLINE2);
-              char subBuff3[200];
+              char subBuff3[4097];
               memcpy(subBuff3, &recvBuff[8], strlen(recvBuff));
               position = atoi(subBuff3);
             printf("the position is: %d\n", position);
@@ -314,6 +322,7 @@ bzero(sendBuff,MAXLINE2);
     {
         perror("recv failed on server\n");
     }
+    printf("ending of readWrite method\n");
 }
 
 /*
@@ -326,8 +335,11 @@ bzero(sendBuff,MAXLINE2);
  */
 void acceptReadWriteServer(int listenfd){
   while(1){
+    printf("first part while loop\n");
     int connfd = acceptServer(listenfd);
+    printf("second part while loop\n");
     readWriteServer(connfd, listenfd); //contains code for receiving and sending data
+    printf("third part of while loop\n");
   }
 }
 
