@@ -21,8 +21,16 @@ waiting for clients to connect to it.
 client.c
 This file contains all the code that makes up the client and allows the client to run.
 It has code which allows the client to connect to the server and exchange messages
-with it. 
+with it. It contains pthreads to allow multithreading possible.
 
 test_ex1.py
 This file is a test script credited to Daniel, our TA, for writing. I have used this
 script to check if all the code compiles and runs successfully.
+
+my1000kbFile.txt    my1500kbFile     my500kbFile
+These are test files that may be used to test the code that I have written. The amount of
+bytes in each file is stated in the name of the file
+
+resultingFile
+This is the output file that will be created after running this program. You may compare
+this file with the original file

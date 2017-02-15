@@ -1,7 +1,7 @@
 #Makefile
 
 client: client.c
-	gcc -Wall client.c -o client
+	gcc -pthread client.c -o client
 	mv client ../bin
 
 server: server.c
@@ -9,7 +9,7 @@ server: server.c
 	mv server ../bin
 
 clean: 
-	rm -f ../bin/client ../bin/server ../bin/*.o
+	rm -f ../bin/client ../bin/server ../bin/*.o ../bin/resultingFile
 
 test: test_ex1.py
 	python3 test_ex1.py

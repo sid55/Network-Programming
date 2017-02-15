@@ -14,11 +14,12 @@
 
 int     listenfd, connfd,read_size; //the listen and accept file desciptors
 struct sockaddr_in servaddr; //the server address
-char    buff[MAXLINE2]; //the buffer which reads and sends lines
+char    recvBuff[MAXLINE2]; //the buffer which reads lines
+char    sendBuff[MAXLINE2]; //buffer which sends lines
 time_t ticks; //ticks variable 
 int port; //server port number
-FILE *in; //will be used with popen
-extern FILE *popen(); //will be used with popen
+
+FILE *fileRead; 
 
 /*
  * This method checks the number of arguments when running
@@ -27,7 +28,7 @@ extern FILE *popen(); //will be used with popen
  */
 void numArgs(int argc){
     if (argc != 2){
-        perror("usage: a.out <PORTnumber>\n");
+        printf("usage: a.out <PORTnumber>\n");
         exit(1);
     }
 }
@@ -41,7 +42,7 @@ void numArgs(int argc){
 int createListenSocket(){
     listenfd = socket(AF_INET, SOCK_STREAM, 0);
     if (listenfd < 0){
-        perror("socket error\n");
+        printf("socket error\n");
         exit(1);
     }
     return listenfd;
@@ -69,7 +70,7 @@ void createServer(const char *portnum){
 void bindServer(int listenfd){
     int bindID = bind(listenfd, (struct sockaddr *) &servaddr, sizeof(servaddr));
     if (bindID < 0){
-        perror("bind error\n");
+        printf("bind error\n");
         exit(1);
     } 
 }
@@ -82,7 +83,7 @@ void bindServer(int listenfd){
 void listenServer(int listenfd){
     int listenID = listen(listenfd, LISTENQ); //the listen queue is LISTENQ
     if (listenID < 0){
-        perror("listen error\n");
+        printf("listen error\n");
         exit(1);
     } 
 }
@@ -97,89 +98,219 @@ void listenServer(int listenfd){
 int acceptServer(int listenfd){
         connfd = accept(listenfd, (struct sockaddr *) NULL, NULL);
         if (connfd < 0){
-            perror("accept error\n");
+            printf("accept error\n");
             exit(1);
-        } 
+        }
         return connfd;
 }
 
 /*
  * This method is the main meat of this program. It has an
  * infinite while loop, that will continuously read input from
- * the client and execute those commands that were sent to it.
- * It does so by using the popen system call which basically
- * opens a file and inputs the execution into it which later
- * gets sent to a buffer. This buffer is then sent to the client
- * who prints the output onto the screen.
+ * the client and send back corresponding messages that were sent to it.
+ * The server puts the output into a buffer. This buffer is then 
+ * sent to the client who prints the output onto the screen.
  */
 void readWriteServer(int connfd, int listenfd){
-  while( (read_size = recv(connfd , buff , MAXLINE2 , 0)) > 0 )
+int bytesToRead;
+int position;
+int sendfd;
+int setForExit = 0;
+bzero(recvBuff,MAXLINE2);
+bzero(sendBuff,MAXLINE2);
+  /*
+   * Infinite while loop that continues to read info from the 
+   * client until no more info needs to be read
+   */
+  while( (read_size = recv(connfd , recvBuff , MAXLINE2 , 0)) > 0 )
     {
-        //makes it possible to put the buffer
-        //into a file. popen executes the command
-        //that the client gives to it.
-        if (!(in = popen(buff, "r"))) {
-          perror("Not able to read stream");
-          exit(1);
-        } 
 
-	//this int value will be used to ensure that
-	//that fgets doesnt get called twice when only is
-	//supposed to get called once
-        int x = 0;
-
-        //if user enters nothing or for other cases like
-        //that, the if else send a message called 
-        //"empty" back to the client 
-        if(fgets(buff,sizeof(buff), in) == NULL){
-            if(strncmp(buff,"exit",4) == 0){
-              sprintf(buff,"exit");
-              write(connfd,buff,strlen(buff));
-              bzero(buff,MAXLINE2);
-              x = 1;
-            }else{
-              sprintf(buff,"empty");
-              write(connfd, buff, strlen(buff));
-              bzero(buff,MAXLINE2);
-              x = 1;
-            }           
-        }else{
-            printf("%s", buff);
-            write(connfd , buff , strlen(buff));
-            bzero(buff,MAXLINE2);
-        }
+        //This is a series of if else statements expecting 
+	//certain inputs from the client. Never goes into
+ 	//into exit statement 
+        if(strncmp(recvBuff,"exit",4) == 0){
+              sprintf(sendBuff,"exit");
+              bzero(recvBuff,MAXLINE2);
+              write(connfd,sendBuff,strlen(sendBuff));
+              bzero(sendBuff,MAXLINE2);
+              fclose(fileRead);
+        }else if(strncmp(recvBuff,"filename",7) == 0){
+              bzero(sendBuff,MAXLINE2);
+              char subBuff[200];
+              memcpy(subBuff, &recvBuff[8], strlen(recvBuff));
+              fileRead = fopen(subBuff,"r");
+              if (fileRead == NULL){
+                  printf("The file you are trying to read does not exist\n");
+                  sprintf(sendBuff,"errorFile");
+                  sendfd = write(connfd, sendBuff, strlen(sendBuff));
+                  if(sendfd < 0){
+                    printf("send error\n");
+                    exit(1);
+                  }
+                  setForExit = 1;
+                  break; 
+              }else{
+                  /*
+                   * Size of file being read set in global variable
+                   */
+                  fseek(fileRead,0L,SEEK_END);
+                  int fileSize = ftell(fileRead);
+                  rewind(fileRead);
+            
+                  bzero(recvBuff,MAXLINE2);
         
-        //this while loop continually reads from the "in"
-        //and puts in the results of popen, line by line
-        //into the buffer which gets sent back to the client
-        while (fgets(buff, sizeof(buff), in) != NULL) {
-            printf("%s", buff);
-            write(connfd , buff , strlen(buff));
-            bzero(buff,MAXLINE2);
+                  sprintf(sendBuff,"sizeFile");
+                  sprintf(sendBuff + strlen(sendBuff),"%d",fileSize);
+                  sendfd = write(connfd, sendBuff, strlen(sendBuff));
+                  if(sendfd < 0){
+                    printf("send error\n");
+                    exit(1);
+                  }
+              }
+              fclose(fileRead);
+              bzero(sendBuff,MAXLINE2); 
+              bzero(recvBuff,MAXLINE2);
+        }else if(strncmp(recvBuff,"openfile",7) == 0){
+              bzero(sendBuff,MAXLINE2);
+              char subBuff5[4097];
+              memcpy(subBuff5, &recvBuff[8], strlen(recvBuff));
+              fileRead = fopen(subBuff5,"r");
+              if (fileRead == NULL){
+                  printf("The file you are trying to read does not exist\n");
+                  exit(1);
+              }
+            
+              bzero(recvBuff,MAXLINE2);
+              bzero(sendBuff,MAXLINE2);
+              sprintf(sendBuff,"openFile2");
+              sendfd = write(connfd, sendBuff, strlen(sendBuff));
+              if(sendfd < 0){
+                printf("send error\n");
+                exit(1);
+              }
+
+
+              bzero(sendBuff,MAXLINE2); 
+              bzero(recvBuff,MAXLINE2);
+        }else if(strncmp(recvBuff,"size",4) == 0){
+              bzero(sendBuff,MAXLINE2);
+              char subBuff2[4097];
+              memcpy(subBuff2, &recvBuff[4], strlen(recvBuff));
+              bytesToRead = atoi(subBuff2);
+
+              bzero(recvBuff,MAXLINE2);
+
+              sprintf(sendBuff,"needPos");
+              sendfd = write(connfd, sendBuff, strlen(sendBuff));
+              if(sendfd < 0){
+                printf("send error\n");
+                exit(1);
+              }
+              bzero(subBuff2,MAXLINE2);
+              bzero(recvBuff,MAXLINE2);
+        }else if(strncmp(recvBuff,"position",8) == 0){
+              bzero(sendBuff,MAXLINE2);
+              char subBuff3[4097];
+              memcpy(subBuff3, &recvBuff[8], strlen(recvBuff));
+              position = atoi(subBuff3);
+
+            //if fileRead is null there is a prob
+            if (fileRead == NULL){
+                printf("file cannot be opened on server\n");
+                exit(1);
+            }
+            rewind(fileRead);
+            fseek(fileRead,position,SEEK_SET);
+                   
+            int writefd = 0;
+            int bytesDivisible = 0;
+            int bytesRemainder = 0;    
+
+            bzero(sendBuff,MAXLINE2);
+            bzero(recvBuff,MAXLINE2);
+            bytesDivisible = bytesToRead/MAXLINE2;
+            bytesRemainder = bytesToRead%MAXLINE2;
+
+	    //Important debugging info -> print if wanted to
+	    /*
+            printf("\n\n\n");
+            printf("the bytesToRead is: %d\n",bytesToRead);
+            printf("the bytesRemainder is: %d\n",bytesRemainder);
+            printf("the bytesDivisible is: %d\n",bytesDivisible);
+            printf("the position is: %d\n",position);
+	    */
+
+            int temp = 0;
+	    
+
+	    /*
+    	     * This while loop keeps on going until the temp is
+	     * equal to the bytesDivisible
+	     */
+            while(temp <= bytesDivisible){
+                bzero(sendBuff,MAXLINE2);
+                if(temp == 0){
+                    fseek(fileRead,position,SEEK_SET);
+                    fread(sendBuff,sizeof(char),bytesRemainder,fileRead);
+                    fseek(fileRead,position + bytesRemainder,SEEK_SET);
+		    printf("%s",sendBuff);
+                    if (temp == bytesDivisible){
+                        setForExit = 1;
+                    }
+                }else{
+                    fseek(fileRead,position + bytesRemainder + ((temp - 1) * MAXLINE2),SEEK_SET);
+                    fread(sendBuff,sizeof(char),MAXLINE2,fileRead);
+		    printf("%s",sendBuff);
+                    if (temp == bytesDivisible){
+                        setForExit = 1;
+                    }
+                }
+                if ((writefd = write(connfd, sendBuff, strlen(sendBuff))) > 0) {
+                    bzero(sendBuff,MAXLINE2);
+                }
+	
+		//If write was not able to do correctly or if the 
+		//the server is done writing certain cases are shown below
+                if(writefd < 0){
+                    printf("was not able to write data correctly\n");
+                    exit(1);
+                }else if(writefd == 0){
+                   bzero(sendBuff,MAXLINE2);
+                   sprintf(sendBuff,"exit");
+                   writefd = write(connfd,sendBuff,strlen(sendBuff));
+                   if (writefd < 0){
+                        printf("server not able to write\n");
+                        exit(1);
+                   }
+                   bzero(sendBuff,MAXLINE2);
+                }
+     
+                bzero(sendBuff,MAXLINE2);
+                temp++;
+            }
+            fclose(fileRead); //fclose here
+
+              bzero(sendBuff,MAXLINE2);
+              bzero(recvBuff,MAXLINE2);
         }
-  
-        //this if statement sends a final message to the client
-        //letting it know its done sending messages and allows the
-        //client to type a new command
-        if((fgets(buff,sizeof(buff), in) == NULL) && (x==0)){
-            bzero(buff,MAXLINE2);
-            sprintf(buff,"empty");
-            write(connfd, buff, strlen(buff));
-            bzero(buff,MAXLINE2);
+        else{
+              printf("Not supposed to come here\n");
         }
-        pclose(in);
-        bzero(buff,MAXLINE2); //zeroes/resets the buffer
+        bzero(recvBuff,MAXLINE2); //zeroes/resets the buffer
+        if(setForExit == 1){
+            break;
+        }
     }
- 
+
     //this is for when the client is done sending
     //its messages to the server. The client disconnects.     
-    if(read_size == 0)
+    if(read_size == 0 || setForExit == 1)
     {
         close(connfd); //closes the file descriptor returned by accept
     }
     else if(read_size < 0)
     {
-        perror("recv failed on server\n");
+        printf("recv failed on server\n");
     }
 }
 
