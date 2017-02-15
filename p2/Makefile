@@ -9,7 +9,7 @@ all: server2.c
 	#valgrind --leak-check=full -v ./server2 1234
 
 client: client.c
-	gcc -pthread client.c -o client
+	gcc -pthread -g client.c -o client
 
 clean: 
 	rm -f client server2 *.o

@@ -368,6 +368,5 @@ main(int argc, char **argv)
   bindServer(listenfd);
   listenServer(listenfd);
   acceptReadWriteServer(listenfd);
-  exit(1);
   return 0;
 }

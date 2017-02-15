@@ -54,6 +54,10 @@ typedef struct{
 //Thread pointer created -> pointer to an array of structs
 Thread *thread_pnt;
 pthread_t *thread_pnt2;
+int *myIntArray;
+
+pthread_mutex_t lock;
+
 /*
  * This method checks to make sure that the number of 
  * arguments is not invalid and above 3. It will
@@ -192,8 +196,81 @@ void getMinAndSetStruct(const char *numConnections, const char *filename, const 
         exit(1);
     }
 
-    //created thread_pnt2 struct and creates instances of pthread_t
+
+
+
+
+
+
+
+   printf("BEFORE WHILE LOOP\n"); 
+int connectCounter = 0;
+while(1){
+    int sockfd = createSocket();
+    int recfd;
+
+    //Create the server with its info below
+    int port;
+    char ipAddr[1024]; //max length of ipaddress - used when opneing file
+    char portNumbr[1024]; //max length of portNumbr - used when opening file
+    if(fscanf(fp,"%s %s",ipAddr,portNumbr) > 0){
+        printf("%s %s \n",ipAddr,portNumbr);
+        if (strncmp(ipAddr,"localhost",9) == 0){
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, "127.0.0.1", &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }else{   
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr2, sizeof(servaddr2));
+            servaddr2.sin_family = AF_INET;
+            servaddr2.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, ipAddr, &servaddr2.sin_addr) <= 0){
+                perror("inet_pton error");
+                exit(1);
+            }
+        }        
+    }else{
+	break;
+    }
+
+    //connect the the server's socket here
+    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) >= 0){
+	connectCounter++;
+    }
+    close(sockfd);
+}
+
+    rewind(fp);
+
+    printf("connectionCOunter %d\n",connectCounter);
+    printf("AFTER WHILE LOOP\n");
+    if(connectCounter < minimum){
+	minimum = connectCounter;
+	minimumTemp = connectCounter;
+    }
+
+
+
+
+
+
+
+
+
+
+//created thread_pnt2 struct and creates instances of pthread_t
     thread_pnt2 = (pthread_t*)malloc(minimumTemp*sizeof(pthread_t));
+    myIntArray = (int*)calloc(minimumTemp,sizeof(int));
+
 
     //set minimum in thread struct
     thread_pnt = (Thread*)malloc(minimumTemp*sizeof(Thread));
@@ -316,6 +393,7 @@ while(1){
             }
         }        
     }else{
+	printf("first perror\n");
         perror("The file is not able to be opened\n");
         exit(1);
     }
@@ -352,6 +430,7 @@ while(1){
         }
         if(strncmp(recvline,"errorFile",9) == 0){
             bzero(recvline,MAXLINE);
+	    printf("the second error statement\n");
             perror("The file is not able to be opened\n");  
             break; 
         }
@@ -421,24 +500,37 @@ void setAvgEtc(){
 void *readWriteSocket(void *threadInfoTemp){
     printf("Gets into this main thread method\n");
     Thread *threadInfo = (Thread *)threadInfoTemp;
+
+
+pthread_mutex_lock(&lock);
+printf("\n\n MUTEX START \n\n");
+
     int sendfd;
     int recfd; //the file descriptor for recieving messages
     int setBreak = 0; //variable set/unset when wanting to break while loops
     struct sockaddr_in servaddr; //the server address
 
 
-    int sockfd = createSocket();
+    int sockfd;
 
     //Create the server with its info below
     int port;
     char ipAddr[1024]; //max length of ipaddress - used when opneing file
     char portNumbr[1024]; //max length of portNumbr - used when opening file
+    int setTrue = 0;
+    int indexArray = 0;
 
-    int countdown = threadInfo->thread_id;
-    while (countdown > 0){
-        fscanf(threadInfo->fp,"%s %s",ipAddr,portNumbr);
-        countdown--;
-    }
+while(setTrue == 0){
+
+    int sockfd2 = createSocket();
+
+    bzero(portNumbr,1024);
+    bzero(ipAddr,1024);
+    //int countdown = threadInfo->thread_id;
+    //while (countdown > 0){
+    //    fscanf(threadInfo->fp,"%s %s",ipAddr,portNumbr);
+    //    countdown--;
+    //}
 
     if(fscanf(threadInfo->fp,"%s %s",ipAddr,portNumbr) > 0){
         printf("%s %s \n",ipAddr,portNumbr);
@@ -465,13 +557,53 @@ void *readWriteSocket(void *threadInfoTemp){
                 exit(1);
             }
         }        
+    }else{
+	perror("client not able to make number of connections needed\n");
+	exit(1);
     }
 
+    printf("THE VALUE OF Index in INTARRRAY is: %d\n",myIntArray[indexArray]);
+
+    int connectfd;
+
     //connect the the server's socket here
-    if (connect(sockfd, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0){
-        perror("connect error\n");
-        exit(1);
+    if (((connectfd = connect(sockfd2, (struct sockaddr *) &servaddr, sizeof(servaddr))) >= 0) && myIntArray[indexArray]==0){
+	printf("Got into first if, id: %d\n", threadInfo->thread_id);
+	printf("Got into first if, arrayInfo at: %d is: %d\n", indexArray, myIntArray[indexArray]);
+	printf("Connectfd is: %d\n",connectfd);
+	setTrue = 1;
+	myIntArray[indexArray] = 1;
+	sockfd = sockfd2;
+	break;
+    }else if (((connectfd = connect(sockfd2, (struct sockaddr *) &servaddr, sizeof(servaddr))) >= 0) && myIntArray[indexArray]==1){
+	printf("Got into second if %d\n", threadInfo->thread_id);
+	printf("Got into second if, arrayInfo at: %d is: %d\n", indexArray, myIntArray[indexArray]);
+	printf("Connectfd is: %d\n",connectfd);
+	close(sockfd2);
+	setTrue = 0;
+    }else{
+	printf("Got into third if, id: %d\n", threadInfo->thread_id);
+	printf("Got into third if, arrayInfo at: %d is: %d\n", indexArray, myIntArray[indexArray]);
+	printf("Connectfd is: %d\n",connectfd);
+	perror("Not able to connect bruh\n");
+	close(sockfd2);
+	setTrue = 0;
     }
+
+
+    indexArray++;
+}
+    printf("\n\n MUTEX END \n\n");
+    pthread_mutex_unlock(&lock);
+
+/*
+   if(pthread_mutex_trylock(&lock)!=0){
+	printf("came onto right polace\n");
+	pthread_mutex_unlock(&lock);
+   }else{
+	printf("not supposed to come here\n");
+   } 
+*/
 
       //infinite while loop that exits either during an error
       //or when the client sends an "exit" message
@@ -686,6 +818,11 @@ main(int argc, char **argv)
     getMinAndSetStruct(argv[2], argv[1], argv[3]);
     getFileSize(argv[3]);
     setAvgEtc();
+    if(pthread_mutex_init(&lock,NULL) != 0){
+        perror("can't initialize mutex correctly\n");
+        exit(1);
+    }
+ 
     //printf("end of main, size of file read is: %d \n",fileSize);
     //int sockfd = createSocket();
 
