@@ -463,14 +463,14 @@ void setAvgEtc(){
 
     //subtracted minimum -1 for indexing position at right place
     thread_pnt[0].fileSize = fileSize;
-    thread_pnt[0].remainderBytes = remainderBytes - (minimum - 1);
-    thread_pnt[0].avgBytes = avgBytes + (minimum - 1);
+    thread_pnt[0].remainderBytes = remainderBytes;
+    thread_pnt[0].avgBytes = avgBytes;
 
     //added minimum -1 for lost bytes 
     while(count <= minTemp){
         thread_pnt[count].fileSize = fileSize;
         thread_pnt[count].remainderBytes = 0;
-        thread_pnt[count].avgBytes = avgBytes + (minimum - 1);
+        thread_pnt[count].avgBytes = avgBytes;
         count++;
     }
 
@@ -479,9 +479,7 @@ void setAvgEtc(){
     int total = 0;
     thread_pnt[0].position = 0;
     while(count <= minTemp){
-	thread_pnt[count].position = remainderBytes + (avgBytes*thread_pnt[count].thread_id);
-	printf("the thread position is: %d\n",thread_pnt[count].position);
-	printf("the remainder of bytes is: %d\n",remainderBytes);
+	thread_pnt[count].position = thread_pnt[count-1].remainderBytes + thread_pnt[count-1].avgBytes + thread_pnt[count-1].position;
 	count++;
     }
 }
@@ -602,7 +600,7 @@ while(setTrue == 0){
                 threadInfo->setFile = 2;
             }else if (threadInfo->setFile == 2){
                 sprintf(threadInfo->sendline,"position");
-                sprintf(threadInfo->sendline + strlen(threadInfo->sendline), "%d", ((threadInfo->avgBytes*threadInfo->counter) + (threadInfo->remainderBytes*threadInfo->tempVal)));
+      		sprintf(threadInfo->sendline + strlen(threadInfo->sendline), "%d", threadInfo->position);
                 threadInfo->setFile = 3;
             }
 

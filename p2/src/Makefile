@@ -1,12 +1,12 @@
-#Makefile
+#Makefilei
 
 client: client.c
 	gcc -pthread client.c -o client
-	mv client ../bin
+	#mv client ../bin
 
 server: server.c
 	gcc -Wall server.c -o server
-	mv server ../bin
+	#mv server ../bin
 
 clean: 
 	rm -f ../bin/client ../bin/server ../bin/*.o ../bin/resultingFile

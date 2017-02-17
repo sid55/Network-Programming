@@ -232,7 +232,7 @@ bzero(sendBuff,MAXLINE2);
             bytesRemainder = bytesToRead%MAXLINE2;
 
 	    //Important debugging info -> print if wanted to
-	    /*
+	    /* 
             printf("\n\n\n");
             printf("the bytesToRead is: %d\n",bytesToRead);
             printf("the bytesRemainder is: %d\n",bytesRemainder);
