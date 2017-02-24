@@ -1,12 +1,3 @@
-/*
-        demo-udp-03: udp-recv: a simple udp server
-	receive udp messages
-
-        usage:  udp-recv
-
-        Paul Krzyzanowski
-*/
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -28,9 +19,8 @@ main(int argc, char **argv)
 	int msgcnt = 0;			/* count # of messages we received */
 	unsigned char buf[BUFSIZE];	/* receive buffer */
 
-
-	/* create a UDP socket */
-
+    pid_t pid;
+    
 	if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
 		perror("cannot create socket\n");
 		return 0;
@@ -41,7 +31,7 @@ main(int argc, char **argv)
 	memset((char *)&myaddr, 0, sizeof(myaddr));
 	myaddr.sin_family = AF_INET;
 	myaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-	myaddr.sin_port = htons(SERVICE_PORT);
+	myaddr.sin_port = htons(1234); //MANUALLY SET THE PORT HERE ----------------------------------
 
 	if (bind(fd, (struct sockaddr *)&myaddr, sizeof(myaddr)) < 0) {
 		perror("bind failed");
@@ -50,18 +40,28 @@ main(int argc, char **argv)
 
 	/* now loop, receiving data and printing what we received */
 	for (;;) {
-		printf("waiting on port %d\n", SERVICE_PORT);
+		printf("waiting on port %d\n", 1234); // AND HERE ------------------------------------------
 		recvlen = recvfrom(fd, buf, BUFSIZE, 0, (struct sockaddr *)&remaddr, &addrlen);
 		if (recvlen > 0) {
-			buf[recvlen] = 0;
-			printf("received message: \"%s\" (%d bytes)\n", buf, recvlen);
+            pid = fork();
+            if (pid == 0){
+                printf("in child process\n");
+                buf[recvlen] = 0;
+			    printf("received message: \"%s\" (%d bytes)\n", buf, recvlen);
+
+                sprintf(buf, "ack %d", msgcnt++);
+		        printf("sending response \"%s\"\n", buf);
+		        if (sendto(fd, buf, strlen(buf), 0, (struct sockaddr *)&remaddr, addrlen) < 0)
+			        perror("sendto");
+
+
+            }else{
+                printf("in parent process\n");
+            }
 		}
 		else
-			printf("uh oh - something went wrong!\n");
-		sprintf(buf, "ack %d", msgcnt++);
-		printf("sending response \"%s\"\n", buf);
-		if (sendto(fd, buf, strlen(buf), 0, (struct sockaddr *)&remaddr, addrlen) < 0)
-			perror("sendto");
-	}
+			printf("something went wrong!\n");
+		}
 	/* never exits */
+    close(fd); 
 }

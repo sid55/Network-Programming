@@ -234,7 +234,7 @@ while(1){
             }
         }        
     }else{
-	break;
+	    break;
     }
 
     //connect the the server's socket here
@@ -242,7 +242,7 @@ while(1){
 	connectCounter++;
     }
     close(sockfd);
-}
+ }
 
     rewind(fp);
 
@@ -479,8 +479,8 @@ void setAvgEtc(){
     int total = 0;
     thread_pnt[0].position = 0;
     while(count <= minTemp){
-	thread_pnt[count].position = thread_pnt[count-1].remainderBytes + thread_pnt[count-1].avgBytes + thread_pnt[count-1].position;
-	count++;
+	    thread_pnt[count].position = thread_pnt[count-1].remainderBytes + thread_pnt[count-1].avgBytes + thread_pnt[count-1].position;
+	    count++;
     }
 }
 
@@ -552,8 +552,8 @@ while(setTrue == 0){
             }
         }        
     }else{
-	printf("client not able to make number of connections needed\n");
-	exit(1);
+	    printf("client not able to make number of connections needed\n");
+	    exit(1);
     }
 
     int connectfd;
@@ -561,16 +561,16 @@ while(setTrue == 0){
     //Series of if else statements allowing connection to the server
     //Keeps track of what has been visited in an array
     if (((connectfd = connect(sockfd2, (struct sockaddr *) &servaddr, sizeof(servaddr))) >= 0) && myIntArray[indexArray]==0){
-	setTrue = 1;
-	myIntArray[indexArray] = 1;
-	sockfd = sockfd2;
-	break;
+	    setTrue = 1;
+	    myIntArray[indexArray] = 1;
+	    sockfd = sockfd2;
+	    break;
     }else if (((connectfd = connect(sockfd2, (struct sockaddr *) &servaddr, sizeof(servaddr))) >= 0) && myIntArray[indexArray]==1){
-	close(sockfd2);
-	setTrue = 0;
+	    close(sockfd2);
+	    setTrue = 0;
     }else{
-	close(sockfd2);
-	setTrue = 0;
+	    close(sockfd2);
+	    setTrue = 0;
     }
 
 
