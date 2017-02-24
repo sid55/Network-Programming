@@ -280,7 +280,7 @@ while(1){
         tv.tv_usec = 0;
         setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(struct timeval));
         printf("Checking Connection %d\n", iter);
-        sprintf(sendline, "Checking connection %d", iter);
+        sprintf(sendline, "WantConnection SeqNum:%d FileName:%s", iter, fileOnServer);
         if (sendto(fd, sendline, strlen(sendline), 0, (struct sockaddr *)&servaddr2, len)==-1) {
             perror("sendto");
             exit(1);
