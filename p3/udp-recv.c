@@ -24,6 +24,7 @@ int port; //server port number
 int recvlen;//# bytes received 
 int msgcnt = 0;			/* count # of messages we received */
 pid_t pid;
+struct timeval tv;
 
 FILE *fileRead; 
 FILE *fileRead2; 
@@ -300,28 +301,25 @@ for (;;) {
                         //}
             
 
-                        
-                        if (sendto(fd, sendBuff, strlen(sendBuff), 0, (struct sockaddr *)&remaddr, addrlen) < 0){
+                        /* 
+                        if ((writefd = sendto(fd, sendBuff, strlen(sendBuff), 0, (struct sockaddr *)&remaddr, addrlen)) < 0){
                             perror("sendto");
                         }else{
                             bzero(sendBuff,MAXLINE2);
                         }
-                        
+                        */
 
 
                         
-                        /* 
+                         
                         //server now acts like client in sending data and sends upto three times to ensure that data
                         //actually gets sent
                         int iter = 1, iter2 = 1;
                         int result = 2;
                         int recvlen;
-                        int len = sizeof(servaddr);
-                        struct timeval tv;
+                        //struct timeval tv;
                         //sends packet out three times to figure out how long it takes
                         while (iter <= 3 ){
-                            bzero(recvBuff,MAXLINE2);        
-                            bzero(sendBuff,MAXLINE2);        
 
                             //power function for exponential backoff
                             while(iter2 > 1){
@@ -334,10 +332,11 @@ for (;;) {
                             setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(struct timeval));
             
 
-                            if (sendto(fd, sendBuff, strlen(sendBuff), 0, (struct sockaddr *)&remaddr, addrlen) < 0){
+                            if ((writefd = sendto(fd, sendBuff, strlen(sendBuff), 0, (struct sockaddr *)&remaddr, addrlen)) < 0){
                                 perror("sendto");
                             }else{
                                 bzero(sendBuff,MAXLINE2);
+                                break;
                             }
 
                             
@@ -371,18 +370,18 @@ for (;;) {
                         iter2 = iter;
                         result = 2;
                         }//close iteration while loop
-                        */
+                        
+
+                        tv.tv_sec = 0;
+                        tv.tv_usec = 0;
+                        setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(struct timeval));
 
 
 
 
 
 
-
-
-
-
-
+                        //FIX BELOW CANT USE WRITE SYSTEM CALL
 
                         //If write was not able to do correctly or if the 
                         //the server is done writing certain cases are shown below
