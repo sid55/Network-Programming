@@ -606,11 +606,9 @@ void *readWriteSocket(void *threadInfoTemp){
         recvlen = recvfrom(fd, threadInfo->recvline, BUFLEN, 0, (struct sockaddr *)&servaddr, &len);
                 if (recvlen >= 0) {
                         //recvline[recvlen] = 0;
-                        char AckT[MAXLINE]; char instructR[MAXLINE]; char portT[MAXLINE]; char fileSizeT[MAXLINE];
-                        bzero(fileSizeT,MAXLINE);
+                        char AckT[MAXLINE]; char instructR[MAXLINE]; 
                         bzero(AckT,MAXLINE);
                         bzero(instructR, MAXLINE);
-                        bzero(portT, MAXLINE);
                         char * pch;
                         pch = strtok(threadInfo->recvline," ");
                         strcpy(instructR,pch);
@@ -623,11 +621,10 @@ void *readWriteSocket(void *threadInfoTemp){
                         int ackNum = atoi(AckR);
 
                         if(seqNum == ackNum){
-                            if (strncmp(instructR, "errorFile", 9) == 0){
-                                printf("Connection success -> errorFile\n");
-                                break;
-                            }else if (strncmp(instructR, "infoFile", 8) == 0){
-                                printf("Connection success: %s\n", threadInfo->recvline);
+                            if (strncmp(instructR, "fileContent", 11) == 0){
+                                printf("About to get file Content: %s\n", threadInfo->recvline);
+
+                                /*
                                 pch = strtok(NULL, " ");
                                 strcpy(portT,pch);
                                 pch = strtok(NULL, " ");
@@ -648,11 +645,13 @@ void *readWriteSocket(void *threadInfoTemp){
                                 
                                 printf("ackNum:%d portReal:%d fileSize:%d \n",ackNum,portReal,fileSize);       
                                 printf("NOT SUPPOSED TO COME HERE!!\n"); 
+                                */
                                 seqNum++; 
                                 break;
                             }
                         }else{
                             printf("testing purposes => packet loss => retransmit\n");
+                            break;
                         }
                 }
     iter++;

@@ -73,6 +73,9 @@ void doServer(int fd){
 
 FILE *fileRead;
 int ACK = 0;
+int bytesToRead;
+int position;
+int setForExit = 0; 
 
 for (;;) {
         bzero(recvBuff, MAXLINE2);
@@ -215,21 +218,114 @@ for (;;) {
                     memcpy(avgBytesR, &avgBytesT[6], strlen(avgBytesT));
                     memcpy(seqNumR, &seqNumT[7], strlen(seqNumT));
                 
-                    printf("avgBytes Real: %s",avgBytesR);
-                    printf(" position Real: %s",positionR);
-                    printf(" seqNum Real: %s\n",seqNumR);
+                    //printf("avgBytes Real: %s",avgBytesR);
+                    //printf(" position Real: %s",positionR);
+                    //printf(" seqNum Real: %s\n",seqNumR);
 
                     ACK = atoi(seqNumR);
                     int positionReal = atoi(positionR);
                     int avgBytesReal = atoi(avgBytesR);
                     
-                    printf("seqNum: %d",ACK);
-                    printf(" position: %d",positionReal);
-                    printf(" avgBytes: %d\n",avgBytesReal);
+                    //printf("seqNum: %d",ACK);
+                    //printf(" position: %d",positionReal);
+                    //printf(" avgBytes: %d\n",avgBytesReal);
+
+                    bytesToRead = avgBytesReal;
+                    position = positionReal; 
 
 
 
-                    bzero(recvBuff, MAXLINE2);
+
+
+                fseek(fileRead2,position,SEEK_SET);
+                       
+                int writefd = 0;
+                int bytesDivisible = 0;
+                int bytesRemainder = 0;    
+
+                bzero(sendBuff,MAXLINE2);
+                bzero(recvBuff,MAXLINE2);
+                bytesDivisible = bytesToRead/MAXLINE2;
+                bytesRemainder = bytesToRead%MAXLINE2;
+
+                //Important debugging info -> print if wanted to
+                /* 
+                    printf("\n\n\n");
+                    printf("the bytesToRead is: %d\n",bytesToRead);
+                    printf("the bytesRemainder is: %d\n",bytesRemainder);
+                    printf("the bytesDivisible is: %d\n",bytesDivisible);
+                    printf("the position is: %d\n",position);
+                */
+
+                    int temp = 0;
+                
+
+                /*
+                     * This while loop keeps on going until the temp is
+                 * equal to the bytesDivisible
+                 */
+                while(temp <= bytesDivisible){
+                    bzero(sendBuff,MAXLINE2);
+                    if(temp == 0){
+                        fseek(fileRead2,position,SEEK_SET);
+                        fread(sendBuff,sizeof(char),bytesRemainder,fileRead2);
+                        fseek(fileRead2,position + bytesRemainder,SEEK_SET);
+                        printf("%s",sendBuff);
+                        if (temp == bytesDivisible){
+                            setForExit = 1;
+                        }
+                    }else{
+                        fseek(fileRead2,position + bytesRemainder + ((temp - 1) * MAXLINE2),SEEK_SET);
+                        fread(sendBuff,sizeof(char),MAXLINE2,fileRead2);
+                        printf("%s",sendBuff);
+                        if (temp == bytesDivisible){
+                            setForExit = 1;
+                        }
+                    }
+                    //if ((writefd = write(connfd, sendBuff, strlen(sendBuff))) > 0) {
+                    //    bzero(sendBuff,MAXLINE2);
+                    //}
+        
+                    if (sendto(fd, sendBuff, strlen(sendBuff), 0, (struct sockaddr *)&remaddr, addrlen) < 0){
+                        perror("sendto");
+                    }else{
+                        bzero(sendBuff,MAXLINE2);
+                    }
+
+
+                    //If write was not able to do correctly or if the 
+                    //the server is done writing certain cases are shown below
+                    if(writefd < 0){
+                        printf("was not able to write data correctly\n");
+                        exit(1);
+                    }else if(writefd == 0){
+                       bzero(sendBuff,MAXLINE2);
+                       sprintf(sendBuff,"exit");
+                       writefd = write(connfd,sendBuff,strlen(sendBuff));
+                       if (writefd < 0){
+                            printf("server not able to write\n");
+                            exit(1);
+                       }
+                       bzero(sendBuff,MAXLINE2);
+                    }
+         
+                    bzero(sendBuff,MAXLINE2);
+                    temp++;
+                }
+                   
+                 fclose(fileRead2); //fclose here
+
+                 bzero(sendBuff,MAXLINE2);
+                 bzero(recvBuff,MAXLINE2);
+
+
+
+
+                    //bzero(sendBuff, MAXLINE2);
+                    //sprintf(sendBuff,"fileContent ACK:%d",ACK);
+                    //if (sendto(fd, sendBuff, strlen(sendBuff), 0, (struct sockaddr *)&remaddr, addrlen) < 0)
+                    //    perror("sendto");
+
                 }else{
                     printf("Not supposed to come here yet(other instructions exist\n");
                     close(fd);
