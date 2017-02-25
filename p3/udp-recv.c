@@ -174,7 +174,7 @@ for (;;) {
                         fseek(fileRead,0L,SEEK_END);
                         int fileSize = ftell(fileRead);
                         rewind(fileRead); 
-                        sprintf(sendBuff,"infoFile portNum:%d ACK:%d fileSize:",randPort,ACK);
+                        sprintf(sendBuff,"infoFile ACK:%d portNum:%d fileSize:",ACK,randPort);
                         sprintf(sendBuff + strlen(sendBuff),"%d",fileSize);
                         fclose(fileRead);
                     }

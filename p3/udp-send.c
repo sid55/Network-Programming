@@ -306,15 +306,16 @@ while(1){
                         char * pch;
                         pch = strtok(recvline," ");
                         strcpy(instructR,pch);
+                        
                         if (strncmp(instructR, "errorFile", 9) == 0){
                             printf("Connection success -> errorFile\n");
                             break;
                         }else if (strncmp(instructR, "infoFile", 8) == 0){
                             printf("Connection success: %s\n", recvline);
                             pch = strtok(NULL, " ");
-                            strcpy(portT,pch);
-                            pch = strtok(NULL, " ");
                             strcpy(AckT,pch);
+                            pch = strtok(NULL, " ");
+                            strcpy(portT,pch);
                             pch = strtok(NULL, " ");
                             strcpy(fileSizeT,pch);
 
@@ -331,6 +332,8 @@ while(1){
 
                             //mySeqNumber = atoi(seqNumR);
                             fileSize = atoi(fileSizeR);
+			                avgBytes = fileSize/minimum;
+           		            remainderBytes = fileSize%minimum;
                             int ackNum = atoi(AckR);
                             int portReal = atoi(portR);                
                             
@@ -465,13 +468,44 @@ while(1){
         count++; 
     }
 
-    //count = 0;
-    //minTemp = minimumTemp -1;
-    //while(count <= minTemp){
-    //    printf("portNum:%d at index:%d \n", thread_pnt[count].realPortNum,count);
-    //    count++;
-    //}
+    count = 0;
+    minTemp = minimumTemp -1;
+    while(count <= minTemp){
+        printf("portNum:%d at index:%d \n", thread_pnt[count].realPortNum,count);
+        count++;
+    }
  
+}
+
+
+/*
+ * Sets avg, total, and remainder in thread_ptr
+ */
+void setAvgEtc(){
+    int count = 1;
+    int minTemp = minimum - 1;
+
+    //subtracted minimum -1 for indexing position at right place
+    thread_pnt[0].fileSize = fileSize;
+    thread_pnt[0].remainderBytes = remainderBytes;
+    thread_pnt[0].avgBytes = avgBytes;
+
+    //added minimum -1 for lost bytes 
+    while(count <= minTemp){
+        thread_pnt[count].fileSize = fileSize;
+        thread_pnt[count].remainderBytes = 0;
+        thread_pnt[count].avgBytes = avgBytes;
+        count++;
+    }
+
+    count = 1;
+    minTemp = minimum -1;
+    int total = 0;
+    thread_pnt[0].position = 0;
+    while(count <= minTemp){
+	    thread_pnt[count].position = thread_pnt[count-1].remainderBytes + thread_pnt[count-1].avgBytes + thread_pnt[count-1].position;
+	    count++;
+    }
 }
 
 
@@ -494,6 +528,7 @@ int main(int argc, char **argv)
     fd = createSocket();
     createClient(fd);
     getMinAndSetStruct(argv[2],argv[1],argv[3],fd); 
+    setAvgEtc();
     printf("the minimum is: %d\n", minimum); 
 
 	/* now define remaddr, the address to whom we want to send messages */
