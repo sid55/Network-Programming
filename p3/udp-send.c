@@ -32,6 +32,8 @@ int fileSize = -1; //size of file that server has
 int remainderBytes = 0; //set as leftover bytes after dividing file size by minimum.
                         //value is added to only first connection then set to 0
 int avgBytes = 0; //set as average number of bytes to send per connection
+int seqNum = 0; //sequence number used for checking
+
 /*
  * A struct thread that will be used throughout this program to hold info about a thread
  */
@@ -51,7 +53,8 @@ typedef struct{
     char myFileName[1024]; //the name of the file being created
     char fileOnServer[200]; //the name of the file on the server
     char currentLoc; //notes the current location(last character)
-    int position; //position to where it the fseek is supposed 
+    int position; //position to where it the fseek is supposed
+    int realPortNum; //new port num created due to UDP process 
 }Thread;
 
 //Thread pointer created -> pointer to an array of structs
@@ -62,6 +65,9 @@ pthread_t *thread_pnt2;
 
 //Int pointer array used to indicate which connections have been made
 int *myIntArray;
+
+//Port number array to know which port numbers to connect to after
+int *myPortNumArray;
 
 //The mutex lock variable
 pthread_mutex_t lock;
@@ -216,6 +222,9 @@ void getMinAndSetStruct(const char *numConnections, const char *filename, const 
     }
 
 
+    myPortNumArray = (int*)calloc(minimumTemp,sizeof(int));
+    int portIndex = 0;
+
 /*
  * This piece of code is for checking the number of connections that are possible 
  * betweent the server and client
@@ -261,7 +270,6 @@ while(1){
     //if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) >= 0){
 	//connectCounter++;
     //}
-    int seqNum = 0;
     int iter = 1, iter2 = 1;
     int result = 2;
     int recvlen;
@@ -269,7 +277,9 @@ while(1){
     struct timeval tv;
     //sends packet out three times to figure out how long it takes
     while (iter <= 3 ){
-        
+        bzero(recvline,MAXLINE);        
+        bzero(sendline,1024);        
+
         //power function for exponential backoff
         while(iter2 > 1){
             result = result * 2;
@@ -279,8 +289,7 @@ while(1){
         tv.tv_sec = result;
         tv.tv_usec = 0;
         setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(struct timeval));
-        printf("Checking Connection %d\n", iter);
-        sprintf(sendline, "WantConnection SeqNum:%d FileName:%s", iter, fileOnServer);
+        sprintf(sendline, "WantConnection SeqNum:%d FileName:%s", seqNum, fileOnServer);
         if (sendto(fd, sendline, strlen(sendline), 0, (struct sockaddr *)&servaddr2, len)==-1) {
             perror("sendto");
             exit(1);
@@ -288,10 +297,54 @@ while(1){
 
         recvlen = recvfrom(fd, recvline, BUFLEN, 0, (struct sockaddr *)&servaddr2, &len);
                 if (recvlen >= 0) {
-                        recvline[recvlen] = 0;	
-                        printf("Connection success: \"%s\"\n", recvline);
-                        connectCounter++;
-                        break;
+                        //recvline[recvlen] = 0;
+                        char fileSizeT[MAXLINE]; char AckT[MAXLINE]; char instructR[MAXLINE]; char portT[MAXLINE];
+                        bzero(fileSizeT,MAXLINE);
+                        bzero(AckT,MAXLINE);
+                        bzero(instructR, MAXLINE);
+                        bzero(portT, MAXLINE);
+                        char * pch;
+                        pch = strtok(recvline," ");
+                        strcpy(instructR,pch);
+                        if (strncmp(instructR, "errorFile", 9) == 0){
+                            printf("Connection success -> errorFile\n");
+                            break;
+                        }else if (strncmp(instructR, "infoFile", 8) == 0){
+                            printf("Connection success: %s\n", recvline);
+                            pch = strtok(NULL, " ");
+                            strcpy(portT,pch);
+                            pch = strtok(NULL, " ");
+                            strcpy(AckT,pch);
+                            pch = strtok(NULL, " ");
+                            strcpy(fileSizeT,pch);
+
+                            char fileSizeR[MAXLINE]; char AckR[MAXLINE]; char portR[MAXLINE];
+                            bzero(fileSizeR,MAXLINE);
+                            bzero(AckR,MAXLINE);
+                            memcpy(fileSizeR, &fileSizeT[9], strlen(fileSizeT));
+                            memcpy(AckR, &AckT[4], strlen(AckT));
+                            memcpy(portR, &portT[8], strlen(portT));
+ 
+                            //printf("filesize Real: %s\n",fileSizeR);
+                            //printf("AckNum Real: %s\n",AckR);
+                            //printf("portNum Real: %s\n",portR);
+
+                            //mySeqNumber = atoi(seqNumR);
+                            fileSize = atoi(fileSizeR);
+                            int ackNum = atoi(AckR);
+                            int portReal = atoi(portR);                
+                            
+                            printf("ackNum:%d portReal:%d fileSize:%d \n",ackNum,portReal,fileSize);       
+                            if (seqNum == ackNum){
+                                myPortNumArray[portIndex] = portReal;
+                                portIndex++;
+                                seqNum++; 
+                                connectCounter++;
+                                break;
+                            }else{
+                                printf("print here for testing purposes\n");
+                            }
+                        }
                 }
     iter++;
     iter2 = iter;
@@ -306,8 +359,8 @@ while(1){
 
     //checking that the the number of connections possible is less than minimum
     if(connectCounter < minimum){
-	minimum = connectCounter;
-	minimumTemp = connectCounter;
+	    minimum = connectCounter;
+	    minimumTemp = connectCounter;
     }
 
 
@@ -315,6 +368,11 @@ while(1){
     thread_pnt2 = (pthread_t*)malloc(minimumTemp*sizeof(pthread_t));
     myIntArray = (int*)calloc(minimumTemp,sizeof(int));
 
+    //error check for 0 servers open/ no servers have file
+    if (minimumTemp == 0){
+        printf("Either no servers are online or no servers have the file\n");
+        exit(1);
+    }
 
     //set minimum in thread struct
     thread_pnt = (Thread*)malloc(minimumTemp*sizeof(Thread));
@@ -398,7 +456,22 @@ while(1){
     while(count <= minTemp){
         thread_pnt[count].currentLoc = 0;
         count++;
-    } 
+    }
+
+    count = 0;
+    minTemp = minimumTemp - 1;
+    while(count <= minTemp){
+        thread_pnt[count].realPortNum = myPortNumArray[count];
+        count++; 
+    }
+
+    //count = 0;
+    //minTemp = minimumTemp -1;
+    //while(count <= minTemp){
+    //    printf("portNum:%d at index:%d \n", thread_pnt[count].realPortNum,count);
+    //    count++;
+    //}
+ 
 }
 
 
