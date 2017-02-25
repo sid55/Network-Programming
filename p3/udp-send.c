@@ -301,7 +301,7 @@ while(1){
         tv.tv_usec = 0;
         setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(struct timeval));
         sprintf(sendline, "WantConnection SeqNum:%d FileName:%s", seqNum, fileOnServer);
-        if (sendto(fd, sendline, strlen(sendline), 0, (struct sockaddr *)&servaddr2, len)==-1) {
+        if (sendto(fd, sendline, strlen(sendline), 0, (struct sockaddr *)&servaddr2, len)<0) {
             perror("sendto");
             exit(1);
         }
@@ -574,7 +574,8 @@ void *readWriteSocket(void *threadInfoTemp){
         }
     }
    
-    //Continue the communication between the pthread and the forked server
+    //Continue the communication between the pthread and the forked server. In here the position
+    //and the number of bytes is sent to the server 
     int iter = 1, iter2 = 1;
     int result = 2;
     int recvlen;
@@ -596,8 +597,7 @@ void *readWriteSocket(void *threadInfoTemp){
         tv.tv_usec = 0;
         setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(struct timeval));
         sprintf(threadInfo->sendline, "NumBytesAndPosition SeqNum:%d Position:%d Bytes:%d", seqNum, threadInfo->position, (threadInfo->avgBytes + threadInfo->remainderBytes));
-        printf("NumBytesAndPosition SeqNum:%d Position:%d Bytes:%d\n", seqNum, threadInfo->position, (threadInfo->avgBytes + threadInfo->remainderBytes)); 
-        if (sendto(fd, threadInfo->sendline, strlen(threadInfo->sendline), 0, (struct sockaddr *)&servaddr, len)==-1) {
+        if (sendto(fd, threadInfo->sendline, strlen(threadInfo->sendline), 0, (struct sockaddr *)&servaddr, len)<0) {
             perror("sendto");
             exit(1);
         }
@@ -621,43 +621,89 @@ void *readWriteSocket(void *threadInfoTemp){
                         int ackNum = atoi(AckR);
 
                         if(seqNum == ackNum){
-                            if (strncmp(instructR, "fileContent", 11) == 0){
-                                printf("About to get file Content: %s\n", threadInfo->recvline);
-
-                                /*
-                                pch = strtok(NULL, " ");
-                                strcpy(portT,pch);
-                                pch = strtok(NULL, " ");
-                                strcpy(fileSizeT,pch);
-
-                                char fileSizeR[MAXLINE]; char portR[MAXLINE];
-                                bzero(fileSizeR,MAXLINE);
-                                memcpy(fileSizeR, &fileSizeT[9], strlen(fileSizeT));
-                                memcpy(portR, &portT[8], strlen(portT));
-     
-                                //printf("filesize Real: %s\n",fileSizeR);
-                                //printf("AckNum Real: %s\n",AckR);
-                                //printf("portNum Real: %s\n",portR);
-
-                                //mySeqNumber = atoi(seqNumR);
-                                fileSize = atoi(fileSizeR);
-                                int portReal = atoi(portR);                
-                                
-                                printf("ackNum:%d portReal:%d fileSize:%d \n",ackNum,portReal,fileSize);       
-                                printf("NOT SUPPOSED TO COME HERE!!\n"); 
-                                */
+                            if (strncmp(instructR, "gotPositionAvg", 14) == 0){
                                 seqNum++; 
                                 break;
                             }
                         }else{
                             printf("testing purposes => packet loss => retransmit\n");
-                            break;
                         }
                 }
     iter++;
     iter2 = iter;
     result = 2;
     }//close iteration while loop
+
+
+
+    
+
+    
+    //In here the client recieves the entire portion of the file it is expecting to recieve
+    iter = 1; iter2 = 1;
+    result = 2;
+    len = sizeof(servaddr);
+    //sends packet out three times to figure out how long it takes
+    while (iter <= 3 ){
+        bzero(threadInfo->recvline,MAXLINE);        
+        bzero(threadInfo->sendline,1024);        
+
+        //power function for exponential backoff
+        while(iter2 > 1){
+            result = result * 2;
+            iter2--; 
+        }
+        printf("the timeout in pthread part2 is: %d\n", result);
+        tv.tv_sec = result;
+        tv.tv_usec = 0;
+        setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(struct timeval));
+        sprintf(threadInfo->sendline, "getFileContent seqNum:%d", seqNum);
+        if (sendto(fd, threadInfo->sendline, strlen(threadInfo->sendline), 0, (struct sockaddr *)&servaddr, len)<0) {
+            perror("sendto");
+            exit(1);
+        }
+
+        
+        recvlen = recvfrom(fd, threadInfo->recvline, BUFLEN, 0, (struct sockaddr *)&servaddr, &len);
+                if (recvlen >= 0) {
+                        printf("Content Recived\n");
+                        //printf("length buffer:%d buffer is:%s\n",(int)strlen(threadInfo->recvline),threadInfo->recvline);
+                        //printf("End of Content\n");
+                        /*
+                        //recvline[recvlen] = 0;
+                        char AckT[MAXLINE]; char instructR[MAXLINE]; 
+                        bzero(AckT,MAXLINE);
+                        bzero(instructR, MAXLINE);
+                        char * pch;
+                        pch = strtok(threadInfo->recvline," ");
+                        strcpy(instructR,pch);
+
+                        char AckR[MAXLINE];
+                        pch = strtok(NULL, " ");
+                        strcpy(AckT,pch);
+                        bzero(AckR,MAXLINE);
+                        memcpy(AckR, &AckT[4], strlen(AckT));
+                        int ackNum = atoi(AckR);
+
+                        if(seqNum == ackNum){
+                            if (strncmp(instructR, "myContent", 9) == 0){
+                                printf("SUCESS IN GETTING MYCONTENT\n");
+                                seqNum++; 
+                                break;
+                            }
+                        }else{
+                            printf("testing purposes => packet loss => retransmit\n");
+                        }
+                        */
+                }
+    iter++;
+    iter2 = iter;
+    result = 2;
+    }//close iteration while loop
+
+
+
+
 
 
 
