@@ -306,47 +306,50 @@ while(1){
                         char * pch;
                         pch = strtok(recvline," ");
                         strcpy(instructR,pch);
-                        
-                        if (strncmp(instructR, "errorFile", 9) == 0){
-                            printf("Connection success -> errorFile\n");
-                            break;
-                        }else if (strncmp(instructR, "infoFile", 8) == 0){
-                            printf("Connection success: %s\n", recvline);
-                            pch = strtok(NULL, " ");
-                            strcpy(AckT,pch);
-                            pch = strtok(NULL, " ");
-                            strcpy(portT,pch);
-                            pch = strtok(NULL, " ");
-                            strcpy(fileSizeT,pch);
 
-                            char fileSizeR[MAXLINE]; char AckR[MAXLINE]; char portR[MAXLINE];
-                            bzero(fileSizeR,MAXLINE);
-                            bzero(AckR,MAXLINE);
-                            memcpy(fileSizeR, &fileSizeT[9], strlen(fileSizeT));
-                            memcpy(AckR, &AckT[4], strlen(AckT));
-                            memcpy(portR, &portT[8], strlen(portT));
- 
-                            //printf("filesize Real: %s\n",fileSizeR);
-                            //printf("AckNum Real: %s\n",AckR);
-                            //printf("portNum Real: %s\n",portR);
+                        char AckR[MAXLINE];
+                        pch = strtok(NULL, " ");
+                        strcpy(AckT,pch);
+                        bzero(AckR,MAXLINE);
+                        memcpy(AckR, &AckT[4], strlen(AckT));
+                        int ackNum = atoi(AckR);
 
-                            //mySeqNumber = atoi(seqNumR);
-                            fileSize = atoi(fileSizeR);
-			                avgBytes = fileSize/minimum;
-           		            remainderBytes = fileSize%minimum;
-                            int ackNum = atoi(AckR);
-                            int portReal = atoi(portR);                
-                            
-                            printf("ackNum:%d portReal:%d fileSize:%d \n",ackNum,portReal,fileSize);       
-                            if (seqNum == ackNum){
+                        if(seqNum == ackNum){
+                            if (strncmp(instructR, "errorFile", 9) == 0){
+                                printf("Connection success -> errorFile\n");
+                                break;
+                            }else if (strncmp(instructR, "infoFile", 8) == 0){
+                                printf("Connection success: %s\n", recvline);
+                                pch = strtok(NULL, " ");
+                                strcpy(portT,pch);
+                                pch = strtok(NULL, " ");
+                                strcpy(fileSizeT,pch);
+
+                                char fileSizeR[MAXLINE]; char portR[MAXLINE];
+                                bzero(fileSizeR,MAXLINE);
+                                memcpy(fileSizeR, &fileSizeT[9], strlen(fileSizeT));
+                                memcpy(portR, &portT[8], strlen(portT));
+     
+                                //printf("filesize Real: %s\n",fileSizeR);
+                                //printf("AckNum Real: %s\n",AckR);
+                                //printf("portNum Real: %s\n",portR);
+
+                                //mySeqNumber = atoi(seqNumR);
+                                fileSize = atoi(fileSizeR);
+                                avgBytes = fileSize/minimum;
+                                remainderBytes = fileSize%minimum;
+                                int portReal = atoi(portR);                
+                                
+                                printf("ackNum:%d portReal:%d fileSize:%d \n",ackNum,portReal,fileSize);       
+      
                                 myPortNumArray[portIndex] = portReal;
                                 portIndex++;
                                 seqNum++; 
                                 connectCounter++;
                                 break;
-                            }else{
-                                printf("print here for testing purposes\n");
                             }
+                        }else{
+                            printf("testing purposes => packet loss => retransmit\n");
                         }
                 }
     iter++;
@@ -509,6 +512,177 @@ void setAvgEtc(){
 }
 
 
+/*
+ * The main logic of this program is in this method. The client 
+ * communicates with the server using the send and recv system 
+ * calls. It has two buffers, one for sending messages and one
+ * for recieving messages. This entire method is put under a while
+ * loop to allow the client to continuously send messages to the
+ * server and there is a seperate while loop inside this client
+ * for receiving messages in case the message being sent by the server
+ * will require multiple packets. If there are any problems using
+ * those two system calls, errors are thrown respectively.
+ *
+ * This method will call createServerHelper and connectSocket within
+ * a loop as well.
+ */
+void *readWriteSocket(void *threadInfoTemp){
+    Thread *threadInfo = (Thread *)threadInfoTemp;
+
+    //locks the mutex
+    pthread_mutex_lock(&lock);
+
+    int sendfd;
+    int recfd; //the file descriptor for recieving messages
+    int setBreak = 0; //variable set/unset when wanting to break while loops
+    struct sockaddr_in servaddr; //the server address
+
+
+    int sockfd;
+
+    //Create the server with its info below
+    int port;
+    char ipAddr[1024]; //max length of ipaddress - used when opneing file
+    char portNumbr[1024]; //max length of portNumbr - used when opening file
+    int setTrue = 0;
+    int indexArray = 0;
+/*
+while(setTrue == 0){
+
+    int sockfd2 = createSocket();
+
+    bzero(portNumbr,1024);
+    bzero(ipAddr,1024);
+
+    if(fscanf(threadInfo->fp,"%s %s",ipAddr,portNumbr) > 0){
+        printf("%s %s \n",ipAddr,portNumbr);
+        if (strncmp(ipAddr,"localhost",9) == 0){
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr, sizeof(servaddr));
+            servaddr.sin_family = AF_INET;
+            servaddr.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, "127.0.0.1", &servaddr.sin_addr) <= 0){
+                printf("inet_pton error\n");
+                exit(1);
+            }
+        }else{   
+            sscanf(portNumbr,"%d",&port);  //port number specified
+            bzero(&servaddr, sizeof(servaddr));
+            servaddr.sin_family = AF_INET;
+            servaddr.sin_port = htons(port); //port number being set
+    
+            //ip address specified below by the user  
+            if (inet_pton(AF_INET, ipAddr, &servaddr.sin_addr) <= 0){
+                printf("inet_pton error\n");
+                exit(1);
+            }
+        }        
+    }else{
+	    printf("client not able to make number of connections needed\n");
+	    exit(1);
+    }
+
+    int connectfd;
+
+    //Series of if else statements allowing connection to the server
+    //Keeps track of what has been visited in an array
+    if (((connectfd = connect(sockfd2, (struct sockaddr *) &servaddr, sizeof(servaddr))) >= 0) && myIntArray[indexArray]==0){
+	    setTrue = 1;
+	    myIntArray[indexArray] = 1;
+	    sockfd = sockfd2;
+	    break;
+    }else if (((connectfd = connect(sockfd2, (struct sockaddr *) &servaddr, sizeof(servaddr))) >= 0) && myIntArray[indexArray]==1){
+	    close(sockfd2);
+	    setTrue = 0;
+    }else{
+	    close(sockfd2);
+	    setTrue = 0;
+    }
+
+
+    indexArray++;
+}
+  */
+
+    printf("got into pthread method\n");
+  
+    //closes mutex here
+    pthread_mutex_unlock(&lock);
+}
+
+
+/*
+ * This method combines all the files after it creates a seperate file
+ * for each thread 
+ */
+void combineFiles(){
+    int minTemp = minimum - 1;
+    int count = 0;
+    FILE *myFile;
+    char ch;
+    while(count <= minTemp){
+        thread_pnt[count].reader = fopen(thread_pnt[count].fileOnServer,"r");
+        if (thread_pnt[count].reader == NULL){
+            printf("the file you want to read to is not possible\n");
+            exit(1);
+        }
+        count++; 
+    }
+
+    myFile = fopen("resultingFile","a"); 
+    if (myFile == NULL){
+        printf("The file cannot be written to\n");
+        exit(1);
+    }   
+ 
+    count = 0;
+    minTemp = minimum - 1;
+    while(count <= minTemp){
+        while( (ch = fgetc(thread_pnt[count].reader)) != EOF){
+            fputc(ch,myFile);
+        }
+        count++; 
+    }
+}
+
+/*
+ * Creates threads for all the servers based on the minimum value
+ */
+void createMyThreads(){
+    int temporaryMin = minimum - 1;
+    int temporaryCounter = 0;
+    while(temporaryCounter <= temporaryMin){
+        if(pthread_create(&thread_pnt2[temporaryCounter],NULL,readWriteSocket,&thread_pnt[temporaryCounter])){
+            printf("problem creating a thread\n");
+            exit(1);
+        } 
+        temporaryCounter++;
+    }
+   
+    temporaryCounter = 0; 
+    while(temporaryCounter <= temporaryMin){
+        if(pthread_join(thread_pnt2[temporaryCounter],NULL)){
+            printf("problem joining first thread\n");
+            exit(1);
+        } 
+        temporaryCounter++;
+    }
+}
+
+/*
+ * This method cleans up by removing the files I have created during this 
+ * program's execution
+ */
+void cleanUp(){
+    int temp = 0;
+    int minT = minimum - 1;
+    while(temp <= minT){
+        remove(thread_pnt[temp].fileOnServer);
+        temp++;
+    }
+}
 
 
 
@@ -530,6 +704,12 @@ int main(int argc, char **argv)
     getMinAndSetStruct(argv[2],argv[1],argv[3],fd); 
     setAvgEtc();
     printf("the minimum is: %d\n", minimum); 
+    if(pthread_mutex_init(&lock,NULL) != 0){
+        printf("can't initialize mutex correctly\n");
+        exit(1);
+    }
+ 
+    createMyThreads();
 
 	/* now define remaddr, the address to whom we want to send messages */
 	/* For convenience, the host address is expressed as a numeric IP address */

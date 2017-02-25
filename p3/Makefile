@@ -1,19 +1,12 @@
-CC=gcc
-CFLAGS = -g 
-# uncomment this for SunOS
-# LIBS = -lsocket -lnsl
+#Makefile
 
 all: udp-send udp-recv
 
-udp-send: udp-send.o 
-	$(CC) -o udp-send udp-send.o $(LIBS)
+udp-send: udp-send.c 
+	gcc -pthread udp-send.c -o client 
 
-udp-recv: udp-recv.o 
-	$(CC) -o udp-recv udp-recv.o $(LIBS)
-
-udp-send.o: udp-send.c port.h
-
-udp-recv.o: udp-recv.c port.h
+udp-recv: udp-recv.c 
+	gcc -pthread udp-recv.c -o server
 
 clean:
-	rm -f udp-send udp-recv udp-send.o udp-recv.o 
+	rm -f client server  
