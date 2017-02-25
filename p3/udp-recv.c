@@ -26,6 +26,7 @@ int msgcnt = 0;			/* count # of messages we received */
 pid_t pid;
 
 FILE *fileRead; 
+FILE *fileRead2; 
 
 /*
  * This method checks the number of arguments when running
@@ -165,6 +166,7 @@ for (;;) {
                     bzero(recvBuff, MAXLINE2);
                     bzero(sendBuff, MAXLINE2); 
                     fileRead = fopen(fileNameR,"r");
+                    fileRead2 = fopen(fileNameR,"r");
                     if (fileRead == NULL){
                        sprintf(sendBuff,"errorFile");
                     }else{
@@ -192,7 +194,43 @@ for (;;) {
                     bzero(seqNumT, MAXLINE2);
                     bzero(instructR, MAXLINE2);  
                 }//close if statement checking instrcution
-                else{
+                else if (strncmp(instructR,"NumBytesAndPosition",19) == 0){
+                    printf("threading complete recieved is: %s\n", recvBuff);
+           
+                    char positionT[MAXLINE2]; char avgBytesT[MAXLINE2];
+ 
+                    //parse through rest of recvBuff
+                    pch = strtok(NULL, " ");
+                    strcpy(seqNumT,pch);
+                    pch = strtok(NULL, " ");
+                    strcpy(positionT,pch);
+                    pch = strtok(NULL, " ");
+                    strcpy(avgBytesT,pch);
+                    
+                    char positionR[MAXLINE2]; char seqNumR[MAXLINE2]; char avgBytesR[MAXLINE2];
+                    bzero(positionR,MAXLINE2);
+                    bzero(seqNumR,MAXLINE2);
+                    bzero(avgBytesR,MAXLINE2);
+                    memcpy(positionR, &positionT[9], strlen(positionT));
+                    memcpy(avgBytesR, &avgBytesT[6], strlen(avgBytesT));
+                    memcpy(seqNumR, &seqNumT[7], strlen(seqNumT));
+                
+                    printf("avgBytes Real: %s",avgBytesR);
+                    printf(" position Real: %s",positionR);
+                    printf(" seqNum Real: %s\n",seqNumR);
+
+                    ACK = atoi(seqNumR);
+                    int positionReal = atoi(positionR);
+                    int avgBytesReal = atoi(avgBytesR);
+                    
+                    printf("seqNum: %d",ACK);
+                    printf(" position: %d",positionReal);
+                    printf(" avgBytes: %d\n",avgBytesReal);
+
+
+
+                    bzero(recvBuff, MAXLINE2);
+                }else{
                     printf("Not supposed to come here yet(other instructions exist\n");
                     close(fd);
                 }

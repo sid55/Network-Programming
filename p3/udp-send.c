@@ -54,8 +54,19 @@ typedef struct{
     char fileOnServer[200]; //the name of the file on the server
     char currentLoc; //notes the current location(last character)
     int position; //position to where it the fseek is supposed
-    int realPortNum; //new port num created due to UDP process 
+    int realPortNum; //new port num created due to UDP process
+    char realIPaddr[1024]; //ip address for new port above 
 }Thread;
+
+/*
+ * A struct for just holding the ip address at a given time
+ */
+typedef struct{
+    char myIPaddr[1024];
+}IPaddr;
+
+//IPaddr pointer created -> pointer to ipaddr struct above
+IPaddr *ipPointer;
 
 //Thread pointer created -> pointer to an array of structs
 Thread *thread_pnt;
@@ -221,7 +232,7 @@ void getMinAndSetStruct(const char *numConnections, const char *filename, const 
         exit(1);
     }
 
-
+    ipPointer = (IPaddr*)malloc(minimumTemp*sizeof(IPaddr));
     myPortNumArray = (int*)calloc(minimumTemp,sizeof(int));
     int portIndex = 0;
 
@@ -336,13 +347,12 @@ while(1){
 
                                 //mySeqNumber = atoi(seqNumR);
                                 fileSize = atoi(fileSizeR);
-                                avgBytes = fileSize/minimum;
-                                remainderBytes = fileSize%minimum;
                                 int portReal = atoi(portR);                
                                 
-                                printf("ackNum:%d portReal:%d fileSize:%d \n",ackNum,portReal,fileSize);       
+                                printf("ackNum:%d portReal:%d fileSize:%d ipaddr:%s\n",ackNum,portReal,fileSize,ipAddr);       
       
                                 myPortNumArray[portIndex] = portReal;
+                                sprintf(ipPointer[portIndex].myIPaddr,"%s",ipAddr);
                                 portIndex++;
                                 seqNum++; 
                                 connectCounter++;
@@ -379,6 +389,10 @@ while(1){
         printf("Either no servers are online or no servers have the file\n");
         exit(1);
     }
+
+    avgBytes = fileSize/minimum;
+    remainderBytes = fileSize%minimum;
+
 
     //set minimum in thread struct
     thread_pnt = (Thread*)malloc(minimumTemp*sizeof(Thread));
@@ -464,20 +478,24 @@ while(1){
         count++;
     }
 
+    //sets ip addr and port of available ports and ipaddr
     count = 0;
     minTemp = minimumTemp - 1;
     while(count <= minTemp){
         thread_pnt[count].realPortNum = myPortNumArray[count];
+        sprintf(thread_pnt[count].realIPaddr,"%s",ipPointer[count].myIPaddr);
         count++; 
     }
 
+    /*
     count = 0;
     minTemp = minimumTemp -1;
     while(count <= minTemp){
         printf("portNum:%d at index:%d \n", thread_pnt[count].realPortNum,count);
+        printf("ipAddr:%s at index:%d \n",thread_pnt[count].realIPaddr,count);
         count++;
     }
- 
+    */
 }
 
 
@@ -487,6 +505,8 @@ while(1){
 void setAvgEtc(){
     int count = 1;
     int minTemp = minimum - 1;
+
+    printf("min:%d avg:%d remain:%d\n",minimum,avgBytes,remainderBytes);
 
     //subtracted minimum -1 for indexing position at right place
     thread_pnt[0].fileSize = fileSize;
@@ -528,88 +548,125 @@ void setAvgEtc(){
  */
 void *readWriteSocket(void *threadInfoTemp){
     Thread *threadInfo = (Thread *)threadInfoTemp;
+    printf("got into pthread method\n");
 
     //locks the mutex
-    pthread_mutex_lock(&lock);
+    //pthread_mutex_lock(&lock);
 
-    int sendfd;
-    int recfd; //the file descriptor for recieving messages
-    int setBreak = 0; //variable set/unset when wanting to break while loops
+    int fd = createSocket();
+
     struct sockaddr_in servaddr; //the server address
 
+    bzero(&servaddr, sizeof(servaddr));
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_port = htons(threadInfo->realPortNum); //port number being set
 
-    int sockfd;
-
-    //Create the server with its info below
-    int port;
-    char ipAddr[1024]; //max length of ipaddress - used when opneing file
-    char portNumbr[1024]; //max length of portNumbr - used when opening file
-    int setTrue = 0;
-    int indexArray = 0;
-/*
-while(setTrue == 0){
-
-    int sockfd2 = createSocket();
-
-    bzero(portNumbr,1024);
-    bzero(ipAddr,1024);
-
-    if(fscanf(threadInfo->fp,"%s %s",ipAddr,portNumbr) > 0){
-        printf("%s %s \n",ipAddr,portNumbr);
-        if (strncmp(ipAddr,"localhost",9) == 0){
-            sscanf(portNumbr,"%d",&port);  //port number specified
-            bzero(&servaddr, sizeof(servaddr));
-            servaddr.sin_family = AF_INET;
-            servaddr.sin_port = htons(port); //port number being set
-    
-            //ip address specified below by the user  
-            if (inet_pton(AF_INET, "127.0.0.1", &servaddr.sin_addr) <= 0){
-                printf("inet_pton error\n");
-                exit(1);
-            }
-        }else{   
-            sscanf(portNumbr,"%d",&port);  //port number specified
-            bzero(&servaddr, sizeof(servaddr));
-            servaddr.sin_family = AF_INET;
-            servaddr.sin_port = htons(port); //port number being set
-    
-            //ip address specified below by the user  
-            if (inet_pton(AF_INET, ipAddr, &servaddr.sin_addr) <= 0){
-                printf("inet_pton error\n");
-                exit(1);
-            }
-        }        
+    //ip address specified below by the user
+    if (strncmp(threadInfo->realIPaddr,"localhost",9) == 0){  
+        if (inet_pton(AF_INET, "127.0.0.1", &servaddr.sin_addr) <= 0){
+            printf("inet_pton error\n");
+            exit(1);
+        }
     }else{
-	    printf("client not able to make number of connections needed\n");
-	    exit(1);
+        if (inet_pton(AF_INET, threadInfo->realIPaddr, &servaddr.sin_addr) <= 0){
+            printf("inet_pton error\n");
+            exit(1);
+        }
     }
+   
+    //Continue the communication between the pthread and the forked server
+    int iter = 1, iter2 = 1;
+    int result = 2;
+    int recvlen;
+    int len = sizeof(servaddr);
+    struct timeval tv;
+    int seqNum = 5;
+    //sends packet out three times to figure out how long it takes
+    while (iter <= 3 ){
+        bzero(threadInfo->recvline,MAXLINE);        
+        bzero(threadInfo->sendline,1024);        
 
-    int connectfd;
+        //power function for exponential backoff
+        while(iter2 > 1){
+            result = result * 2;
+            iter2--; 
+        }
+        printf("the timeout in pthread is: %d\n", result);
+        tv.tv_sec = result;
+        tv.tv_usec = 0;
+        setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(struct timeval));
+        sprintf(threadInfo->sendline, "NumBytesAndPosition SeqNum:%d Position:%d Bytes:%d", seqNum, threadInfo->position, (threadInfo->avgBytes + threadInfo->remainderBytes));
+        printf("NumBytesAndPosition SeqNum:%d Position:%d Bytes:%d\n", seqNum, threadInfo->position, (threadInfo->avgBytes + threadInfo->remainderBytes)); 
+        if (sendto(fd, threadInfo->sendline, strlen(threadInfo->sendline), 0, (struct sockaddr *)&servaddr, len)==-1) {
+            perror("sendto");
+            exit(1);
+        }
 
-    //Series of if else statements allowing connection to the server
-    //Keeps track of what has been visited in an array
-    if (((connectfd = connect(sockfd2, (struct sockaddr *) &servaddr, sizeof(servaddr))) >= 0) && myIntArray[indexArray]==0){
-	    setTrue = 1;
-	    myIntArray[indexArray] = 1;
-	    sockfd = sockfd2;
-	    break;
-    }else if (((connectfd = connect(sockfd2, (struct sockaddr *) &servaddr, sizeof(servaddr))) >= 0) && myIntArray[indexArray]==1){
-	    close(sockfd2);
-	    setTrue = 0;
-    }else{
-	    close(sockfd2);
-	    setTrue = 0;
-    }
+        
+        recvlen = recvfrom(fd, threadInfo->recvline, BUFLEN, 0, (struct sockaddr *)&servaddr, &len);
+                if (recvlen >= 0) {
+                        //recvline[recvlen] = 0;
+                        char AckT[MAXLINE]; char instructR[MAXLINE]; char portT[MAXLINE]; char fileSizeT[MAXLINE];
+                        bzero(fileSizeT,MAXLINE);
+                        bzero(AckT,MAXLINE);
+                        bzero(instructR, MAXLINE);
+                        bzero(portT, MAXLINE);
+                        char * pch;
+                        pch = strtok(threadInfo->recvline," ");
+                        strcpy(instructR,pch);
+
+                        char AckR[MAXLINE];
+                        pch = strtok(NULL, " ");
+                        strcpy(AckT,pch);
+                        bzero(AckR,MAXLINE);
+                        memcpy(AckR, &AckT[4], strlen(AckT));
+                        int ackNum = atoi(AckR);
+
+                        if(seqNum == ackNum){
+                            if (strncmp(instructR, "errorFile", 9) == 0){
+                                printf("Connection success -> errorFile\n");
+                                break;
+                            }else if (strncmp(instructR, "infoFile", 8) == 0){
+                                printf("Connection success: %s\n", threadInfo->recvline);
+                                pch = strtok(NULL, " ");
+                                strcpy(portT,pch);
+                                pch = strtok(NULL, " ");
+                                strcpy(fileSizeT,pch);
+
+                                char fileSizeR[MAXLINE]; char portR[MAXLINE];
+                                bzero(fileSizeR,MAXLINE);
+                                memcpy(fileSizeR, &fileSizeT[9], strlen(fileSizeT));
+                                memcpy(portR, &portT[8], strlen(portT));
+     
+                                //printf("filesize Real: %s\n",fileSizeR);
+                                //printf("AckNum Real: %s\n",AckR);
+                                //printf("portNum Real: %s\n",portR);
+
+                                //mySeqNumber = atoi(seqNumR);
+                                fileSize = atoi(fileSizeR);
+                                int portReal = atoi(portR);                
+                                
+                                printf("ackNum:%d portReal:%d fileSize:%d \n",ackNum,portReal,fileSize);       
+                                printf("NOT SUPPOSED TO COME HERE!!\n"); 
+                                seqNum++; 
+                                break;
+                            }
+                        }else{
+                            printf("testing purposes => packet loss => retransmit\n");
+                        }
+                }
+    iter++;
+    iter2 = iter;
+    result = 2;
+    }//close iteration while loop
 
 
-    indexArray++;
-}
-  */
 
-    printf("got into pthread method\n");
-  
+ 
+    printf("end of pthread method\n"); 
     //closes mutex here
-    pthread_mutex_unlock(&lock);
+    //pthread_mutex_unlock(&lock);
+    close(fd);
 }
 
 
