@@ -695,6 +695,7 @@ void *readWriteSocket(void *threadInfoTemp){
                             printf("testing purposes => packet loss => retransmit\n");
                         }
                         */
+                        break;
                 }
     iter++;
     iter2 = iter;
