@@ -13,7 +13,7 @@
 #include "port.h"
 
 #define MAXLINE 4096 //size of buffer
-#define BUFLEN 2048
+#define BUFLEN 4096 
 #define MSGS 100	/* number of messages to send */
 
 
@@ -52,7 +52,7 @@ typedef struct{
     int counter; //set and unset for calculating the average
     char myFileName[1024]; //the name of the file being created
     char fileOnServer[200]; //the name of the file on the server
-    char currentLoc; //notes the current location(last character)
+    int currentLoc; //notes the current location(last character)
     int position; //position to where it the fseek is supposed
     int realPortNum; //new port num created due to UDP process
     char realIPaddr[1024]; //ip address for new port above
@@ -458,7 +458,7 @@ while(1){
     minTemp = minimumTemp - 1;
     char fileName2[200];
     while (count <= minTemp){
-        sprintf(fileName2,"myReadingFilez");
+        sprintf(fileName2,"%s-",fileOnServer);
         sprintf(fileName2 + strlen(fileName2), "%d", (count));
         sprintf(thread_pnt[count].fileOnServer,"%s",fileName2); 
         thread_pnt[count].reader = fopen(fileName2,"a");
@@ -782,16 +782,11 @@ void *readWriteSocket(void *threadInfoTemp){
                             //pthread_mutex_lock(&lock);
 
                             recvlen = recvfrom(fd, threadInfo->recvline, BUFLEN, 0, (struct sockaddr *)&servaddr, &len);
-                            //printf("recieved buffer: %s\n",threadInfo->recvline);
-
-                        printf("CCCUUURRREENNTTT BEFOREEEEE:%d  recvlen:%d id:%d\n",threadInfo->currentLoc,recvlen,threadInfo->thread_id);
-
                             threadInfo->currentLoc = (threadInfo->currentLoc + recvlen)/*(int)strlen(threadInfo->recvline)*/;
-                        printf("CCCUUURRREENNTTT AFFTEERR:%d  recvlen:%d id:%d\n",threadInfo->currentLoc,recvlen,threadInfo->thread_id);
                             fseek(threadInfo->reader, threadInfo->currentLoc,SEEK_SET);
                             int val = fwrite(threadInfo->recvline,1,strlen(threadInfo->recvline),threadInfo->reader); 
                     
-                            printf("CURRENTloc:%d FWRITEval:%d recvlen:%d strelen:%d\n",threadInfo->currentLoc,val,recvlen,(int)strlen(threadInfo->recvline));
+                            printf("thread_id:%d currentLoc:%d FWriteVal:%d recvlen:%d strelen:%d\n",threadInfo->thread_id,threadInfo->currentLoc,val,recvlen,(int)strlen(threadInfo->recvline));
                             //pthread_mutex_unlock(&lock);
 
                             bzero(threadInfo->recvline,MAXLINE); //zero out buff
@@ -892,11 +887,13 @@ void *readWriteSocket(void *threadInfoTemp){
  * This method combines all the files after it creates a seperate file
  * for each thread 
  */
-void combineFiles(){
+void combineFiles(const char* fileOnServer){
     int minTemp = minimum - 1;
     int count = 0;
     FILE *myFile;
     char ch;
+    char fileNewBuff[200];
+    bzero(fileNewBuff,200);
     while(count <= minTemp){
         rewind(thread_pnt[count].reader);
         thread_pnt[count].reader = fopen(thread_pnt[count].fileOnServer,"r");
@@ -907,11 +904,12 @@ void combineFiles(){
         count++; 
     }
 
-    if (access("resultingFile",F_OK)!=-1){
-        remove("resultingFile");
+    sprintf(fileNewBuff,"%s.out",fileOnServer);
+    if (access(fileNewBuff,F_OK)!=-1){
+        remove(fileNewBuff);
     }
 
-    myFile = fopen("resultingFile","a"); 
+    myFile = fopen(fileNewBuff,"a"); 
     if (myFile == NULL){
         printf("The file cannot be written to\n");
         exit(1);
@@ -990,7 +988,7 @@ int main(int argc, char **argv)
     }
  
     createMyThreads();
-    combineFiles();
+    combineFiles(argv[3]);
     cleanUp();
 
 

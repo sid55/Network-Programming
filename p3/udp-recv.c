@@ -85,7 +85,6 @@ for (;;) {
 
         
 		recvlen = recvfrom(fd, recvBuff, MAXLINE2, 0, (struct sockaddr *)&remaddr, &addrlen);
-		printf("server not reciving anything??\n");
 		if (recvlen > 0) {
             pid = fork();
             if (pid == 0){
@@ -307,7 +306,9 @@ for (;;) {
                     */
 
                     bzero(sendBuff,MAXLINE2);
-                    fread(sendBuff,sizeof(char),bytesToRead,fileRead2);
+                    int readVal = fread(sendBuff,sizeof(char),bytesToRead,fileRead2);
+
+                    printf("buffSize:%d read#bytes:%d\n",(int)strlen(sendBuff),readVal);
 
      
                     int writefd = 0;
