@@ -21,6 +21,10 @@
  * NOTE: All these global variables are not being used in the method
  *       called by pthread_create. The int array is the only
  * 	 one but a mutex lock is done around it to ensure thread safety
+ *
+ * NOTE: I have left little debug statements throughout the code for
+ * 	 observational purposes. You may uncomment those pieces of 
+ * 	 code to further see in detail of what is going on.
  */
 char    recvline[MAXLINE], sendline[1024]; //the recieve and send buffers
 struct sockaddr_in servaddr2, myaddr; //the server address
@@ -153,10 +157,6 @@ void createServer(const char *ipaddr, const char *portnum){
  * that it can be successfully opened.
  */
 void checkServerFile(const char *filename){
-    if (strncmp(filename,"server-info.txt",15) != 0){
-        printf("The file should be server-info.txt\n");
-        exit(EXIT_FAILURE);
-    }
     fp = fopen(filename,"r");
     if (fp == NULL){
         printf("The file you are trying to open does not exist\n");
@@ -258,8 +258,6 @@ while(1){
             servaddr2.sin_family = AF_INET;
             servaddr2.sin_port = htons(port); //port number being set
 
-	    printf("the port is:%d\n",port);   
- 
             //ip address specified below by the user  
             if (inet_pton(AF_INET, "127.0.0.1", &servaddr2.sin_addr) <= 0){
                 printf("inet_pton error\n");
@@ -271,8 +269,6 @@ while(1){
             bzero(&servaddr2, sizeof(servaddr2));
             servaddr2.sin_family = AF_INET;
             servaddr2.sin_port = htons(port); //port number being set
-
-	    printf("the port PART2: %d\n",port);
     
             //ip address specified below by the user  
             if (inet_pton(AF_INET, ipAddr, &servaddr2.sin_addr) <= 0){
@@ -285,10 +281,6 @@ while(1){
 	    break;
     }
 
-    //connect the the server's socket here
-    //if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) >= 0){
-	//connectCounter++;
-    //}
     int iter = 1, iter2 = 1;
     int result = 2;
     int recvlen;
@@ -304,10 +296,6 @@ while(1){
             result = result * 2;
             iter2--; 
         }
-        printf("the result is: %d\n", result);
-        //tv.tv_sec = result;
-        //tv.tv_usec = 0;
-        //setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(struct timeval));
         sprintf(sendline, "WantConnection SeqNum:%d FileName:%s", seqNum, fileOnServer);
         if (sendto(fd, sendline, MAXLINE /*strlen(sendline)*/, 0, (struct sockaddr *)&servaddr2, len)<0) {
             perror("sendto");
@@ -319,7 +307,6 @@ while(1){
         setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(struct timeval));
         recvlen = recvfrom(fd, recvline, BUFLEN, 0, (struct sockaddr *)&servaddr2, &len);
                 if (recvlen >= 0) {
-                        //recvline[recvlen] = 0;
                         char fileSizeT[MAXLINE]; char AckT[MAXLINE]; char instructR[MAXLINE]; char portT[MAXLINE];
                         bzero(fileSizeT,MAXLINE);
                         bzero(AckT,MAXLINE);
@@ -335,15 +322,14 @@ while(1){
                         bzero(AckR,MAXLINE);
                         memcpy(AckR, &AckT[4], strlen(AckT));
                         int ackNum = atoi(AckR);
-
-			printf("the seqNum:%d ackNum:%d \n",seqNum,ackNum);
+				
+			//Debugging Info
+			//printf("the seqNum:%d ackNum:%d \n",seqNum,ackNum);
 
                         if(seqNum == ackNum){
                             if (strncmp(instructR, "errorFile", 9) == 0){
-                                printf("Connection success -> errorFile\n");
                                 break;
                             }else if (strncmp(instructR, "infoFile", 8) == 0){
-                                printf("Connection success: %s\n", recvline);
                                 pch = strtok(NULL, " ");
                                 strcpy(portT,pch);
                                 pch = strtok(NULL, " ");
@@ -353,16 +339,18 @@ while(1){
                                 bzero(fileSizeR,MAXLINE);
                                 memcpy(fileSizeR, &fileSizeT[9], strlen(fileSizeT));
                                 memcpy(portR, &portT[8], strlen(portT));
-     
+    
+				//Debgging Info 
                                 //printf("filesize Real: %s\n",fileSizeR);
                                 //printf("AckNum Real: %s\n",AckR);
                                 //printf("portNum Real: %s\n",portR);
-
                                 //mySeqNumber = atoi(seqNumR);
+
                                 fileSize = atoi(fileSizeR);
                                 int portReal = atoi(portR);                
                                 
-                                printf("ackNum:%d portReal:%d fileSize:%d ipaddr:%s\n",ackNum,portReal,fileSize,ipAddr);       
+				//Debugging Info
+                                //printf("ackNum:%d portReal:%d fileSize:%d ipaddr:%s\n",ackNum,portReal,fileSize,ipAddr);       
       
                                 myPortNumArray[portIndex] = portReal;
                                 sprintf(ipPointer[portIndex].myIPaddr,"%s",ipAddr);
@@ -372,7 +360,7 @@ while(1){
                                 break;
                             }
                         }else{
-                            printf("testing purposes => packet loss => retransmit\n");
+                            printf("packet loss => retransmit\n");
                         }
                 }
     iter++;
@@ -500,6 +488,7 @@ while(1){
         count++; 
     }
 
+    //Debugging information
     /*
     count = 0;
     minTemp = minimumTemp -1;
@@ -518,8 +507,6 @@ while(1){
 void setAvgEtc(){
     int count = 1;
     int minTemp = minimum - 1;
-
-    printf("min:%d avg:%d remain:%d\n",minimum,avgBytes,remainderBytes);
 
     //subtracted minimum -1 for indexing position at right place
     thread_pnt[0].fileSize = fileSize;
@@ -561,10 +548,6 @@ void setAvgEtc(){
  */
 void *readWriteSocket(void *threadInfoTemp){
     Thread *threadInfo = (Thread *)threadInfoTemp;
-    printf("got into pthread method\n");
-
-    //locks the mutex
-    //pthread_mutex_lock(&lock);
 
     int fd = createSocket();
 
@@ -614,7 +597,6 @@ void *readWriteSocket(void *threadInfoTemp){
             result = result * 2;
             iter2--; 
         }
-        printf("the timeout in pthread is:%d thread_id:%d\n", result,threadInfo->thread_id);
         tv.tv_sec = result;
         tv.tv_usec = 0;
         setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(struct timeval));
@@ -624,12 +606,9 @@ void *readWriteSocket(void *threadInfoTemp){
             exit(1);
         }
 
-       	printf("before neg thread_id:%d\n",threadInfo->thread_id);
 	bzero(threadInfo->recvline,MAXLINE); 
         recvlen = recvfrom(fd, threadInfo->recvline, BUFLEN, 0, (struct sockaddr *)&servaddr, &len);
-		printf("neg thread_id:%d\n",threadInfo->thread_id);
                 if (recvlen >= 0) {
-			printf("part0 thread_id:%d\n",threadInfo->thread_id);
                         //recvline[recvlen] = 0;
                         char AckT[MAXLINE]; char instructR[MAXLINE]; 
                         bzero(AckT,MAXLINE);
@@ -644,10 +623,8 @@ void *readWriteSocket(void *threadInfoTemp){
                         bzero(AckR,MAXLINE);
                         memcpy(AckR, &AckT[4], strlen(AckT));
                         int ackNum = atoi(AckR);
-			printf("part1 thread_id:%d\n",threadInfo->thread_id);
                         if(seqNum == ackNum){
                             if (strncmp(instructR, "gotPositionAvg", 14) == 0){
-				printf("part2 thread_id:%d\n",threadInfo->thread_id);
                                 char bytesDivisibleT[MAXLINE]; char bytesRemainderT[MAXLINE]; char servBuffLenT[MAXLINE];
                                 char servPositionT[MAXLINE]; 
                                 bzero(bytesDivisibleT,MAXLINE);
@@ -685,15 +662,15 @@ void *readWriteSocket(void *threadInfoTemp){
                                 servPosition = atoi(servPositionR);
 
                                 
-
-                                printf("thread_id:%d bytesRemain:%d bytesDivis:%d servBuffLen:%d servPosition:%d\n",threadInfo->thread_id,servBytesRemainder,servBytesDivisible,servBuffLen,servPosition);
+				//Debugging Info
+                                //printf("thread_id:%d bytesRemain:%d bytesDivis:%d servBuffLen:%d servPosition:%d\n",threadInfo->thread_id,servBytesRemainder,servBytesDivisible,servBuffLen,servPosition);
  
  
                                 seqNum++; 
                                 break;
                             }
                         }else{
-                            printf("testing purposes => packet loss => retransmit\n");
+                            printf("packet loss => retransmit\n");
                         }
 		}
     iter++;
@@ -703,7 +680,6 @@ void *readWriteSocket(void *threadInfoTemp){
 
     pthread_mutex_unlock(&lock);
 
-    printf("success thread_id:%d\n",threadInfo->thread_id);
 
 
     
@@ -721,22 +697,18 @@ void *readWriteSocket(void *threadInfoTemp){
             result = result * 2;
             iter2--; 
         }
-        printf("the timeout in pthread part2 is: %d\n", result);
         tv.tv_sec = result;
         tv.tv_usec = 0;
         setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(struct timeval));
-        //sprintf(threadInfo->sendline, "getFileContent seqNum:%d", seqNum);
-        //printf("0000000000000000000000\n");
         bzero(threadInfo->sendline,1024);
-        //print each parts of sendline
+
+        //debugging info
         /*
-        printf("1111111111111111111111\n");
         printf("seqNum is: %d\n",seqNum);
         printf("servPos is: %d\n", servPosition);
         printf("servBytesRemain is: %d\n",servBytesRemainder);
 	*/
         sprintf(threadInfo->sendline, "getFileContent SeqNum:%d Position:%d Bytes:%d", seqNum, servPosition, servBytesRemainder);
-        printf("the sendline has:%s\n",threadInfo->sendline); 
 	
         if (sendto(fd, threadInfo->sendline, strlen(threadInfo->sendline), 0, (struct sockaddr *)&servaddr, len)<0) {
             perror("sendto");
@@ -745,8 +717,6 @@ void *readWriteSocket(void *threadInfoTemp){
         
         recvlen = recvfrom(fd, threadInfo->recvline, BUFLEN, 0, (struct sockaddr *)&servaddr, &len);
                 if (recvlen >= 0) {
-                        printf("Content Recived\n");
-                        //printf("%s\n",threadInfo->recvline);
 
                         //NEED TO DO -> Ack confirmation on client side and increase seqNum by 1
 
@@ -756,11 +726,7 @@ void *readWriteSocket(void *threadInfoTemp){
                         while(temp <= servBytesDivisible){
                             bzero(threadInfo->sendline,1024);
                             if(temp == 0){
-                                //fseek(fileRead,servPosition,SEEK_SET);
-                                //fread(sendBuff,sizeof(char),bytesRemainder,fileRead);
-                                //fseek(fileRead,position + bytesRemainder,SEEK_SET);
                                 sprintf(threadInfo->sendline, "getFileContent SeqNum:%d Position:%d Bytes:%d", seqNum, servPosition, servBytesRemainder); 
-                                printf("%s\n",threadInfo->sendline);
                                 if (sendto(fd, threadInfo->sendline, strlen(threadInfo->sendline), 0, (struct sockaddr *)&servaddr, len)<0) {
                                     perror("sendto");
                                     exit(1);
@@ -770,10 +736,7 @@ void *readWriteSocket(void *threadInfoTemp){
                                     setClientExit = 1;
                                 }
                             }else{
-                                //fseek(fileRead,position + bytesRemainder + ((temp - 1) * MAXLINE2),SEEK_SET);
-                                //fread(sendBuff,sizeof(char),MAXLINE2,fileRead);
                                 sprintf(threadInfo->sendline, "getFileContent SeqNum:%d Position:%d Bytes:%d", seqNum, servPosition + servBytesRemainder + ((temp-1)*servBuffLen), servBuffLen); 
-                                printf("%s\n",threadInfo->sendline);
                                 if (sendto(fd, threadInfo->sendline, strlen(threadInfo->sendline), 0, (struct sockaddr *)&servaddr, len)<0) {
                                     perror("sendto");
                                     exit(1);
@@ -783,42 +746,23 @@ void *readWriteSocket(void *threadInfoTemp){
                                     setClientExit = 1;
                                 }
                             }
-                            //if ((writefd = write(connfd, sendBuff, strlen(sendBuff))) > 0) {
-                            //    bzero(sendBuff,MAXLINE2);
-                            //}
-
-                            //pthread_mutex_lock(&lock);
 
                             recvlen = recvfrom(fd, threadInfo->recvline, BUFLEN, 0, (struct sockaddr *)&servaddr, &len);
-                            threadInfo->currentLoc = (threadInfo->currentLoc + recvlen)/*(int)strlen(threadInfo->recvline)*/;
-                            fseek(threadInfo->reader, threadInfo->currentLoc,SEEK_SET);
-                            int val = fwrite(threadInfo->recvline,1,strlen(threadInfo->recvline),threadInfo->reader); 
-                    
-                            printf("thread_id:%d currentLoc:%d FWriteVal:%d recvlen:%d strelen:%d\n",threadInfo->thread_id,threadInfo->currentLoc,val,recvlen,(int)strlen(threadInfo->recvline));
-                            //pthread_mutex_unlock(&lock);
+			    if (recvlen>0){
+				    threadInfo->currentLoc = (threadInfo->currentLoc + recvlen)/*(int)strlen(threadInfo->recvline)*/;
+				    fseek(threadInfo->reader, threadInfo->currentLoc,SEEK_SET);
+				    int val = fwrite(threadInfo->recvline,1,strlen(threadInfo->recvline),threadInfo->reader); 
+			    
+				    //printf("thread_id:%d currentLoc:%d FWriteVal:%d recvlen:%d strelen:%d\n",threadInfo->thread_id,threadInfo->currentLoc,val,recvlen,(int)strlen(threadInfo->recvline));
 
-                            bzero(threadInfo->recvline,MAXLINE); //zero out buff
+				    bzero(threadInfo->recvline,MAXLINE); //zero out buff
+			    }else if (recvlen == 0){
+				break;
+			    }else{
+				printf("Error during retrieving data\n");
+				exit(1);
+			    }
 
-                            //change below val later
-                            int writefd = 5;
-                
-                            //If write was not able to do correctly or if the 
-                            //the server is done writing certain cases are shown below
-                            /*
-                            if(writefd < 0){
-                                printf("was not able to write data correctly\n");
-                                exit(1);
-                            }else if(writefd == 0){
-                               bzero(sendBuff,MAXLINE2);
-                               sprintf(sendBuff,"exit");
-                               writefd = write(connfd,sendBuff,strlen(sendBuff));
-                               if (writefd < 0){
-                                    printf("server not able to write\n");
-                                    exit(1);
-                               }
-                               bzero(sendBuff,MAXLINE2);
-                            }
-                            */
                             bzero(threadInfo->sendline,1024);
                             temp++;
                         }
@@ -886,7 +830,7 @@ void *readWriteSocket(void *threadInfoTemp){
 
 
  
-    printf("end of pthread method\n"); 
+    printf("Thread %d has finished collecting data\n",threadInfo->thread_id); 
     close(fd);
 }
 
@@ -989,7 +933,6 @@ int main(int argc, char **argv)
     createClient(fd);
     getMinAndSetStruct(argv[2],argv[1],argv[3],fd); 
     setAvgEtc();
-    printf("the minimum is: %d\n", minimum); 
     if(pthread_mutex_init(&lock,NULL) != 0){
         printf("can't initialize mutex correctly\n");
         exit(1);
@@ -998,41 +941,7 @@ int main(int argc, char **argv)
     createMyThreads();
     combineFiles(argv[3]);
     cleanUp();
-
-
-	/* now define remaddr, the address to whom we want to send messages */
-	/* For convenience, the host address is expressed as a numeric IP address */
-	/* that we will convert to a binary format via inet_aton */
-
-    /*
-	memset((char *) &remaddr, 0, sizeof(remaddr));
-	remaddr.sin_family = AF_INET;
-	remaddr.sin_port = htons(SERVICE_PORT);
-	if (inet_aton(server, &remaddr.sin_addr)==0) {
-		fprintf(stderr, "inet_aton() failed\n");
-		exit(1);
-	}
-    */
-
-
-	/* now let's send the messages */
-
-    /*
-	for (i=0; i < MSGS; i++) {
-		printf("Sending packet %d to %s port %d\n", i, server, SERVICE_PORT);
-		sprintf(buf, "This is packet %d", i);
-		if (sendto(fd, buf, strlen(buf), 0, (struct sockaddr *)&remaddr, slen)==-1) {
-			perror("sendto");
-			exit(1);
-		}
-
-		recvlen = recvfrom(fd, buf, BUFLEN, 0, (struct sockaddr *)&remaddr, &slen);
-                if (recvlen >= 0) {
-                        buf[recvlen] = 0;	
-                        printf("received message: \"%s\"\n", buf);
-                }
-	}
-    */
-	close(fd);
-	return 0;
+    close(fd);
+    printf("\nClient has finished collecting data from servers\n");
+    return 0;
 }

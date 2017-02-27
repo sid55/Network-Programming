@@ -204,11 +204,9 @@ for (;;) {
                     bzero(instructR, MAXLINE2);  
                 }//close if statement checking instrcution
                 else if (strncmp(instructR,"NumBytesAndPosition",19) == 0){
-                    printf("threading complete recieved is: %s\n", recvBuff);
            
                     char positionT[MAXLINE2]; char avgBytesT[MAXLINE2];
  
-		    printf("0000000000000000000000000000000000000\n");
                     //parse through rest of recvBuff
                     pch = strtok(NULL, " ");
                     strcpy(seqNumT,pch);
@@ -225,8 +223,6 @@ for (;;) {
                     memcpy(avgBytesR, &avgBytesT[6], strlen(avgBytesT));
                     memcpy(seqNumR, &seqNumT[7], strlen(seqNumT));
                
-		    printf("1111111111111111111111111111111\n");
- 
                     //printf("avgBytes Real: %s",avgBytesR);
                     //printf(" position Real: %s",positionR);
                     //printf(" seqNum Real: %s\n",seqNumR);
@@ -248,14 +244,12 @@ for (;;) {
                     bytesDivisible = bytesToRead/MAXLINE2;
                     bytesRemainder = bytesToRead%MAXLINE2;
 		
-		    printf("22222222222222222222222222222\n");
 
                     bzero(sendBuff,MAXLINE2);
                     sprintf(sendBuff, "gotPositionAvg ACK:%d bytesDivisible:%d bytesRemainder:%d servBuffLen:%d servPosition:%d", ACK,bytesDivisible,bytesRemainder,MAXLINE2,position);
                     if (sendto(fd, sendBuff, strlen(sendBuff), 0, (struct sockaddr *)&remaddr, addrlen) < 0)
                         perror("sendto");
 
-		    printf("3333333333333333333333333333\n");
 
                 }else if (strncmp(instructR,"getFileContent",14) == 0){
 
