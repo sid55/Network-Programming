@@ -131,7 +131,6 @@ for (;;) {
 
                     //printf("before close fd: %d \n", fd);
                     int tempFd = fd;
-                    close(fd);
 
                     //printf("after close fd: %d \n",fd);
                   
@@ -149,8 +148,8 @@ for (;;) {
                         //}
                     //}
             
-                    //printf("after create socket fd is: %d \n",fd);
-
+                    printf("after create => fd:%d tempFd:%d\n",fd,tempFd);
+		    close(tempFd);
       
                     //make random port
                     int randPort;
@@ -159,7 +158,6 @@ for (;;) {
                         srand((unsigned) time(&x));
                         //srand(getpid())
                         randPort = rand() % (65535 + 1 - 40000) + 40000; 
-                        printf("the randPort is: %d \n",randPort);
 
                         bzero(&servaddr, sizeof(servaddr));
                         servaddr.sin_family = AF_INET;
@@ -210,6 +208,7 @@ for (;;) {
            
                     char positionT[MAXLINE2]; char avgBytesT[MAXLINE2];
  
+		    printf("0000000000000000000000000000000000000\n");
                     //parse through rest of recvBuff
                     pch = strtok(NULL, " ");
                     strcpy(seqNumT,pch);
@@ -225,7 +224,9 @@ for (;;) {
                     memcpy(positionR, &positionT[9], strlen(positionT));
                     memcpy(avgBytesR, &avgBytesT[6], strlen(avgBytesT));
                     memcpy(seqNumR, &seqNumT[7], strlen(seqNumT));
-                
+               
+		    printf("1111111111111111111111111111111\n");
+ 
                     //printf("avgBytes Real: %s",avgBytesR);
                     //printf(" position Real: %s",positionR);
                     //printf(" seqNum Real: %s\n",seqNumR);
@@ -246,13 +247,15 @@ for (;;) {
 
                     bytesDivisible = bytesToRead/MAXLINE2;
                     bytesRemainder = bytesToRead%MAXLINE2;
-
+		
+		    printf("22222222222222222222222222222\n");
 
                     bzero(sendBuff,MAXLINE2);
                     sprintf(sendBuff, "gotPositionAvg ACK:%d bytesDivisible:%d bytesRemainder:%d servBuffLen:%d servPosition:%d", ACK,bytesDivisible,bytesRemainder,MAXLINE2,position);
                     if (sendto(fd, sendBuff, strlen(sendBuff), 0, (struct sockaddr *)&remaddr, addrlen) < 0)
                         perror("sendto");
 
+		    printf("3333333333333333333333333333\n");
 
                 }else if (strncmp(instructR,"getFileContent",14) == 0){
 

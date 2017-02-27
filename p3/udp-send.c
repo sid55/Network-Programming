@@ -602,7 +602,7 @@ void *readWriteSocket(void *threadInfoTemp){
     int temp = 0;
     int setClientExit = 0;
     
-
+    pthread_mutex_lock(&lock);
     //sends packet out three times to figure out how long it takes
     while (iter <= 3 ){
         bzero(threadInfo->recvline,MAXLINE);        
@@ -613,7 +613,7 @@ void *readWriteSocket(void *threadInfoTemp){
             result = result * 2;
             iter2--; 
         }
-        printf("the timeout in pthread is: %d\n", result);
+        printf("the timeout in pthread is:%d thread_id:%d\n", result,threadInfo->thread_id);
         tv.tv_sec = result;
         tv.tv_usec = 0;
         setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(struct timeval));
@@ -623,9 +623,12 @@ void *readWriteSocket(void *threadInfoTemp){
             exit(1);
         }
 
-        
+       	printf("before neg thread_id:%d\n",threadInfo->thread_id);
+	bzero(threadInfo->recvline,MAXLINE); 
         recvlen = recvfrom(fd, threadInfo->recvline, BUFLEN, 0, (struct sockaddr *)&servaddr, &len);
+		printf("neg thread_id:%d\n",threadInfo->thread_id);
                 if (recvlen >= 0) {
+			printf("part0 thread_id:%d\n",threadInfo->thread_id);
                         //recvline[recvlen] = 0;
                         char AckT[MAXLINE]; char instructR[MAXLINE]; 
                         bzero(AckT,MAXLINE);
@@ -640,9 +643,10 @@ void *readWriteSocket(void *threadInfoTemp){
                         bzero(AckR,MAXLINE);
                         memcpy(AckR, &AckT[4], strlen(AckT));
                         int ackNum = atoi(AckR);
-
+			printf("part1 thread_id:%d\n",threadInfo->thread_id);
                         if(seqNum == ackNum){
                             if (strncmp(instructR, "gotPositionAvg", 14) == 0){
+				printf("part2 thread_id:%d\n",threadInfo->thread_id);
                                 char bytesDivisibleT[MAXLINE]; char bytesRemainderT[MAXLINE]; char servBuffLenT[MAXLINE];
                                 char servPositionT[MAXLINE]; 
                                 bzero(bytesDivisibleT,MAXLINE);
@@ -656,6 +660,7 @@ void *readWriteSocket(void *threadInfoTemp){
                                 bzero(bytesDivisibleR,MAXLINE);
                                 memcpy(bytesDivisibleR, &bytesDivisibleT[15], strlen(bytesDivisibleT));
                                 servBytesDivisible = atoi(bytesDivisibleR);
+				
 
                                 char bytesRemainderR[MAXLINE];
                                 pch = strtok(NULL, " ");
@@ -680,7 +685,7 @@ void *readWriteSocket(void *threadInfoTemp){
 
                                 
 
-                                printf("bytesRemain:%d bytesDivis:%d servBuffLen:%d servPosition:%d\n",servBytesRemainder,servBytesDivisible,servBuffLen,servPosition);
+                                printf("thread_id:%d bytesRemain:%d bytesDivis:%d servBuffLen:%d servPosition:%d\n",threadInfo->thread_id,servBytesRemainder,servBytesDivisible,servBuffLen,servPosition);
  
  
                                 seqNum++; 
@@ -689,13 +694,17 @@ void *readWriteSocket(void *threadInfoTemp){
                         }else{
                             printf("testing purposes => packet loss => retransmit\n");
                         }
-                }
+                }else{
+			printf("is there error here?\n");
+		}
     iter++;
     iter2 = iter;
     result = 2;
     }//close iteration while loop
 
+    pthread_mutex_unlock(&lock);
 
+    printf("success thread_id:%d\n",threadInfo->thread_id);
 
 
     
