@@ -8,7 +8,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <string.h>
-#include "port.h"
 
 #define BUFSIZE 2048
 #define MAXLINE2 4096 //size of bytes for the buffer
@@ -279,9 +278,9 @@ for (;;) {
 			    int avgBytesReal = atoi(avgBytesR);
 			
 			    //Debugging Info
-			    printf("seqNum Part2: %d",serverSeqNum);
-			    printf(" position Part2: %d",positionReal);
-			    printf(" avgBytes Part2: %d\n",avgBytesReal);
+			    //printf("seqNum Part2: %d",serverSeqNum);
+			    //printf(" position Part2: %d",positionReal);
+			    //printf(" avgBytes Part2: %d\n",avgBytesReal);
 
 			    bytesToRead = avgBytesReal;
 			    position = positionReal; 
@@ -305,12 +304,13 @@ for (;;) {
 			    bzero(sendBuff,MAXLINE2);
 			    sprintf(sendBuff,"ACK:%d",serverSeqNum);
 			    int readVal = fread(sendBuff+14,sizeof(char),bytesToRead,fileRead2);
-			    //printf("sendBuff is:%s",sendBuff);
 		
 			    //Debugging Info
-			    printf("buffSize:%d read#bytes:%d\n",(int)strlen(sendBuff),readVal);
+			    //printf("buffSize:%d read#bytes:%d\n",(int)strlen(sendBuff),readVal);
 			    //printf("%.*s\n",bytesToRead,30+sendBuff);
-	     
+	    
+			    printf("%s\n",sendBuff);
+ 
 			    int writefd = 0;
 			    if ((writefd = sendto(fd, sendBuff, strlen(sendBuff), 0, (struct sockaddr *)&remaddr, addrlen)) < 0){
 				perror("sendto");

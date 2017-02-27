@@ -1,0 +1,36 @@
+Name: Sidharth Gilela
+ID: sgilela@ucsc.edu
+
+README
+This file contains a brief description of all the files created for this project.
+
+design.pdf
+This file is my design document which holds the information describing this entire project.
+It explains why certain design decisions were made, how the code can be executed, and
+an overall idea of what my code is trying to accomplish.
+
+Makefile
+This file allows the compilation of both the server and the client by "make udp-send"
+and "make udp-recv". It also allows both to compile back to back with "make all".
+
+udp-rcv.c
+This file contains all the code that makes up the server and allows the server to run.
+It runs the server code and allows the server to listen for an infinite time
+waiting for clients to connect to it. It provides concurrency with forking.
+
+udp-send.c
+This file contains all the code that makes up the client and allows the client to run.
+It has code which allows the client know which server(s) are up and exchange messages
+with it. It contains pthreads to allow multithreading possible.
+
+my1000kbFile.txt    my1500kbFile     my500kbFile     my200kbFile      my475kbFile     my42kbFile
+These are test files that may be used to test the code that I have written. The amount of
+bytes in each file is stated in the name of the file
+
+"filename".out
+This is the output file that will be created after running this program. You may compare
+this file with the original file. It will be labeled as filename.out where filename is
+the file you are looking for on the server(s).
+
+client server
+The names of the executables that are created when compiling the client and the server

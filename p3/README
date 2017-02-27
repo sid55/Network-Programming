@@ -1,1 +1,0 @@
-This project is basically a UDP client server application. We had to make UDP reliable and the servers concurrent along with the clients acting as threads.
