@@ -539,20 +539,6 @@ void setAvgEtc(){
 
 
 /*
- * This method cleans up by removing the files I have created during this 
- * program's execution
- */
-void cleanUp(){
-    int temp = 0;
-    int minT = minimum - 1;
-    while(temp <= minT){
-        remove(thread_pnt[temp].fileOnServer);
-        temp++;
-    }
-}
-
-
-/*
  * The main logic of this program is in this method. The client 
  * communicates with the server using the sendTo and recvFrom system 
  * calls. It has two buffers, one for sending messages and one
@@ -731,109 +717,114 @@ void *readWriteSocket(void *threadInfoTemp){
             perror("sendto");
             exit(1);
         }
-       
-	int superExit = 0; 
+        
         recvlen = recvfrom(fd, threadInfo->recvline, BUFLEN, 0, (struct sockaddr *)&servaddr, &len);
                 if (recvlen >= 0) {
 
                         //NEED TO DO -> Ack confirmation on client side and increase seqNum by 1
 
 
-
-
-
-
                         int temp = 0;
-			int innerRetransmit = 2;
-			int innerIteration = 1;
 
-			while(temp <= servBytesDivisible){
+                        while(temp <= servBytesDivisible){
+                            bzero(threadInfo->sendline,1024);
+                            if(temp == 0){
+				printf("Bytes Reaminder:%d\n",servBytesRemainder);
+                                sprintf(threadInfo->sendline, "getFileContent SeqNum:%d Position:%d Bytes:%d", seqNum, servPosition, servBytesRemainder); 
+                                if (sendto(fd, threadInfo->sendline, strlen(threadInfo->sendline), 0, (struct sockaddr *)&servaddr, len)<0) {
+                                    perror("sendto");
+                                    exit(1);
+                                }
 
-				while(innerIteration <= 3){
+                                if (temp == servBytesDivisible){
+                                    setClientExit = 1;
+                                }
+                            }else{
+                                sprintf(threadInfo->sendline, "getFileContent SeqNum:%d Position:%d Bytes:%d", seqNum, servPosition + servBytesRemainder + ((temp-1)*servBuffLen), servBuffLen); 
+                                if (sendto(fd, threadInfo->sendline, strlen(threadInfo->sendline), 0, (struct sockaddr *)&servaddr, len)<0) {
+                                    perror("sendto");
+                                    exit(1);
+                                }
 
+                                if (temp == servBytesDivisible){
+                                    setClientExit = 1;
+                                }
+                            }
 
-				   tv.tv_sec = innerRetransmit;
-				   tv.tv_usec = 0;
-				   setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(struct timeval));
+                            recvlen = recvfrom(fd, threadInfo->recvline, BUFLEN, 0, (struct sockaddr *)&servaddr, &len);
+			    if (recvlen>0){
+				    char myAckArray[MAXLINE]; char restBuffer[MAXLINE];
+				    bzero(myAckArray,MAXLINE);
+				    bzero(restBuffer,MAXLINE);
 
+				    int length = (recvlen - 14);
+				    strncpy(myAckArray,threadInfo->recvline + 0,14);
+				    strncpy(restBuffer,threadInfo->recvline + 14,(int)strlen(threadInfo->recvline));
 
-				    bzero(threadInfo->sendline,1024);
-				    if(temp == 0){
-					sprintf(threadInfo->sendline, "getFileContent SeqNum:%d Position:%d Bytes:%d", seqNum, servPosition, servBytesRemainder); 
-					if (sendto(fd, threadInfo->sendline, strlen(threadInfo->sendline), 0, (struct sockaddr *)&servaddr, len)<0) {
-					    perror("sendto");
-					    exit(1);
-					}
+				    //printf("myAckArray:%s\n",myAckArray);
+				    //printf("restBuffer:%s\n",restBuffer);
 
-					if (temp == servBytesDivisible){
-					    setClientExit = 1;
-					}
-				    }else{
-					sprintf(threadInfo->sendline, "getFileContent SeqNum:%d Position:%d Bytes:%d", seqNum, servPosition + servBytesRemainder + ((temp-1)*servBuffLen), servBuffLen); 
-					if (sendto(fd, threadInfo->sendline, strlen(threadInfo->sendline), 0, (struct sockaddr *)&servaddr, len)<0) {
-					    perror("sendto");
-					    exit(1);
-					}
+				    //exit(1);
+				    //threadInfo->currentLoc = (threadInfo->currentLoc + recvlen)/*(int)strlen(threadInfo->recvline)*/;
+				    //fseek(threadInfo->reader, threadInfo->currentLoc,SEEK_SET);
+				    //int val = fwrite(threadInfo->recvline,1,strlen(threadInfo->recvline),threadInfo->reader); 
+			   
+				    threadInfo->currentLoc = (threadInfo->currentLoc + length)/*(int)strlen(threadInfo->recvline)*/;
+				    fseek(threadInfo->reader, threadInfo->currentLoc,SEEK_SET);
+				    int val = fwrite(restBuffer,1,length,threadInfo->reader); 
 
-					if (temp == servBytesDivisible){
-					    setClientExit = 1;
-					}
-				    }
+ 
+				    printf("thread_id:%d currentLoc:%d FWriteVal:%d recvlen:%d strelen:%d\n",threadInfo->thread_id,threadInfo->currentLoc,val,recvlen,(int)strlen(threadInfo->recvline));
 
-				    recvlen = recvfrom(fd, threadInfo->recvline, BUFLEN, 0, (struct sockaddr *)&servaddr, &len);
-				    if (recvlen>0){
-					    char myAckArray[MAXLINE]; char restBuffer[MAXLINE];
-					    bzero(myAckArray,MAXLINE);
-					    bzero(restBuffer,MAXLINE);
-
-					    int length = (recvlen - 14);
-					    strncpy(myAckArray,threadInfo->recvline + 0,14);
-
-					    char myAckArrayReal[MAXLINE];
-					    bzero(myAckArrayReal,MAXLINE);
-					    strncpy(myAckArrayReal,myAckArray + 4,10);
-
-					    int tempooSeqNumber = atoi(myAckArrayReal);
-					    if (tempooSeqNumber == seqNum){
-						    strncpy(restBuffer,threadInfo->recvline + 14,(int)strlen(threadInfo->recvline));
-						    threadInfo->currentLoc = (threadInfo->currentLoc + length)/*(int)strlen(threadInfo->recvline)*/;
-						    fseek(threadInfo->reader, threadInfo->currentLoc,SEEK_SET);
-						    int val = fwrite(restBuffer,1,length,threadInfo->reader); 
-						
-						    //Debugging Info
-						    //printf("thread_id:%d currentLoc:%d FWriteVal:%d recvlen:%d strelen:%d\n",threadInfo->thread_id,threadInfo->currentLoc,val,recvlen,(int)strlen(threadInfo->recvline));
-
-						    bzero(threadInfo->recvline,MAXLINE); //zero out buff
-						    seqNum++;
-						    break;
-					    }else{
-						   printf("packet loss => retransmit\n");
-					    }
-				    }else if (recvlen == 0){
-					superExit = 1;
-					break;
-				    }else{
-					printf("packet loss => retransmit\n");	
-				    }
-
-				innerIteration++;
-				innerRetransmit = innerRetransmit * 2;
-				}//close retransmit loop here
-
-			    if(innerIteration == 4){
-				printf("The server cannot be contacted\n");
-				cleanUp();
+				    bzero(threadInfo->recvline,MAXLINE); //zero out buff
+				    seqNum++;
+			    }else if (recvlen == 0){
+				break;
+			    }else{
+				printf("Error during retrieving data\n");
 				exit(1);
-			    }	
-
-			    if(superExit == 1){
-			   	break;
 			    }
 
                             bzero(threadInfo->sendline,1024);
                             temp++;
                         }
+                
 
+                        /* 
+                        bzero(threadInfo->sendline,1024);
+                        sprintf(threadInfo->sendline,"gotData ACK:%d", 7); 
+                        if (sendto(fd, threadInfo->sendline, strlen(threadInfo->sendline), 0, (struct sockaddr *)&servaddr, len) < 0)
+                            perror("sendto");
+                        */ 
+
+                        //printf("length buffer:%d buffer is:%s\n",(int)strlen(threadInfo->recvline),threadInfo->recvline);
+                        //printf("End of Content\n");
+                        /*
+                        //recvline[recvlen] = 0;
+                        char AckT[MAXLINE]; char instructR[MAXLINE]; 
+                        bzero(AckT,MAXLINE);
+                        bzero(instructR, MAXLINE);
+                        char * pch;
+                        pch = strtok(threadInfo->recvline," ");
+                        strcpy(instructR,pch);
+
+                        char AckR[MAXLINE];
+                        pch = strtok(NULL, " ");
+                        strcpy(AckT,pch);
+                        bzero(AckR,MAXLINE);
+                        memcpy(AckR, &AckT[4], strlen(AckT));
+                        int ackNum = atoi(AckR);
+
+                        if(seqNum == ackNum){
+                            if (strncmp(instructR, "myContent", 9) == 0){
+                                printf("SUCESS IN GETTING MYCONTENT\n");
+                                seqNum++; 
+                                break;
+                            }
+                        }else{
+                            printf("testing purposes => packet loss => retransmit\n");
+                        }
+                        */
                         break;
                 }
     iter++;
@@ -909,6 +900,19 @@ void createMyThreads(){
             exit(1);
         } 
         temporaryCounter++;
+    }
+}
+
+/*
+ * This method cleans up by removing the files I have created during this 
+ * program's execution
+ */
+void cleanUp(){
+    int temp = 0;
+    int minT = minimum - 1;
+    while(temp <= minT){
+        remove(thread_pnt[temp].fileOnServer);
+        temp++;
     }
 }
 
