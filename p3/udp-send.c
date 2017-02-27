@@ -281,6 +281,12 @@ while(1){
 	    break;
     }
 
+
+    /*
+     * This brief piece of code checks how many servers out there have the file
+     * that the client needs and how many servers are even active from the 
+     * server file list
+     */
     int iter = 1, iter2 = 1;
     int result = 2;
     int recvlen;
@@ -534,17 +540,16 @@ void setAvgEtc(){
 
 /*
  * The main logic of this program is in this method. The client 
- * communicates with the server using the send and recv system 
+ * communicates with the server using the sendTo and recvFrom system 
  * calls. It has two buffers, one for sending messages and one
  * for recieving messages. This entire method is put under a while
  * loop to allow the client to continuously send messages to the
  * server and there is a seperate while loop inside this client
  * for receiving messages in case the message being sent by the server
- * will require multiple packets. If there are any problems using
+ * will require multiple packets. Other while loops are for packet 
+ * retransmission if packets are lost. If there are any problems using
  * those two system calls, errors are thrown respectively.
  *
- * This method will call createServerHelper and connectSocket within
- * a loop as well.
  */
 void *readWriteSocket(void *threadInfoTemp){
     Thread *threadInfo = (Thread *)threadInfoTemp;
@@ -679,14 +684,12 @@ void *readWriteSocket(void *threadInfoTemp){
     }//close iteration while loop
 
     pthread_mutex_unlock(&lock);
-
-
-
-    
+ 
     //In here the client recieves the entire portion of the file it is expecting to recieve
     iter = 1; iter2 = 1;
     result = 2;
     len = sizeof(servaddr);
+
     //sends packet out three times to figure out how long it takes
     while (iter <= 3 ){
         bzero(threadInfo->recvline,MAXLINE);        
@@ -756,6 +759,7 @@ void *readWriteSocket(void *threadInfoTemp){
 				    //printf("thread_id:%d currentLoc:%d FWriteVal:%d recvlen:%d strelen:%d\n",threadInfo->thread_id,threadInfo->currentLoc,val,recvlen,(int)strlen(threadInfo->recvline));
 
 				    bzero(threadInfo->recvline,MAXLINE); //zero out buff
+				    seqNum++;
 			    }else if (recvlen == 0){
 				break;
 			    }else{
@@ -767,21 +771,6 @@ void *readWriteSocket(void *threadInfoTemp){
                             temp++;
                         }
                 
-
-
-
-
-
-
-
-
-
-
-                        //threadInfo->currentLoc = threadInfo->currentLoc + strlen(threadInfo->recvline);
-                        //fseek(threadInfo->reader, threadInfo->currentLoc,SEEK_SET);
-                        //int val = fwrite(threadInfo->recvline,1,strlen(threadInfo->recvline),threadInfo->reader); 
-                        //bzero(threadInfo->recvline,MAXLINE); //zero out buff
-
 
                         /* 
                         bzero(threadInfo->sendline,1024);
@@ -824,11 +813,6 @@ void *readWriteSocket(void *threadInfoTemp){
     iter2 = iter;
     result = 2;
     }//close iteration while loop
-
-
-
-
-
  
     printf("Thread %d has finished collecting data\n",threadInfo->thread_id); 
     close(fd);
@@ -921,23 +905,21 @@ void cleanUp(){
 
 int main(int argc, char **argv)
 {
-	//struct sockaddr_in remaddr;
-	int fd; //i , slen=sizeof(remaddr);
-	//char buf[BUFLEN];	/* message buffer */
-	//int recvlen;		/* # bytes in acknowledgement message */
-	//char *server = "127.0.0.1";	/* change this to use a different server */
-
+    printf("Communication has Started\n");
+    int fd;
     numArgs(argc);
     checkServerFile(argv[1]); 
     fd = createSocket();
     createClient(fd);
+    printf("Checking which connections are active... (This could take some time)\n");
     getMinAndSetStruct(argv[2],argv[1],argv[3],fd); 
     setAvgEtc();
     if(pthread_mutex_init(&lock,NULL) != 0){
         printf("can't initialize mutex correctly\n");
         exit(1);
     }
- 
+
+    printf("Starting to recieve data from server and place into file\n"); 
     createMyThreads();
     combineFiles(argv[3]);
     cleanUp();
