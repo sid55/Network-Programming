@@ -32,7 +32,7 @@ int fileSize = -1; //size of file that server has
 int remainderBytes = 0; //set as leftover bytes after dividing file size by minimum.
                         //value is added to only first connection then set to 0
 int avgBytes = 0; //set as average number of bytes to send per connection
-int seqNum = 0; //sequence number used for checking
+//int seqNum = 0; //sequence number used for checking
 
 /*
  * A struct thread that will be used throughout this program to hold info about a thread
@@ -203,6 +203,7 @@ void getMinAndSetStruct(const char *numConnections, const char *filename, const 
     int tempNumConnections = -1;
     int tempNumLines = 0;
     int ch = 0;
+    int seqNum = 0; //sequence number used for checking
 
     /*
      * Find number of lines and set numConnections to int
@@ -694,8 +695,6 @@ void *readWriteSocket(void *threadInfoTemp){
                         }else{
                             printf("testing purposes => packet loss => retransmit\n");
                         }
-                }else{
-			printf("is there error here?\n");
 		}
     iter++;
     iter2 = iter;
