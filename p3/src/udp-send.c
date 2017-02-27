@@ -165,10 +165,6 @@ void checkServerFile(const char *filename){
 
 //Passing in the filename and the thread object index
 void checkServerFile2(const char *filename, Thread threadInfo){
-    if (strncmp(filename,"server-info.txt",15) != 0){
-        printf("The file should be server-info.txt\n");
-        exit(EXIT_FAILURE);
-    }
     threadInfo.fp = fopen(filename,"r");
     if (threadInfo.fp == NULL){
         printf("The file you are trying to open does not exist\n");
@@ -435,10 +431,6 @@ while(1){
     count = 0;
     minTemp = minimumTemp - 1;
     while(count <= minTemp){
-        if (strncmp(filename,"server-info.txt",15) != 0){
-            printf("The file should be server-info.txt\n");
-            exit(EXIT_FAILURE);
-        }
         thread_pnt[count].fp = fopen(filename,"r");
         if (thread_pnt[count].fp == NULL){
             printf("The file you are trying to open does not exist\n");
@@ -697,6 +689,11 @@ void *readWriteSocket(void *threadInfoTemp){
     }//close iteration while loop
 
     pthread_mutex_unlock(&lock);
+
+    if(iter == 4){
+	printf("Server(s) is not able to send back information to you\n");
+	exit(1);
+    }
  
     //In here the client recieves the entire portion of the file it is expecting to recieve
     iter = 1; iter2 = 1;
@@ -839,6 +836,12 @@ void *readWriteSocket(void *threadInfoTemp){
     iter2 = iter;
     result = 2;
     }//close iteration while loop
+
+    if(iter==4){
+	printf("Server(s) is not able to send back information to you\n");
+	exit(1);
+    }
+
  
     printf("Thread %d has finished collecting data\n",threadInfo->thread_id); 
     close(fd);

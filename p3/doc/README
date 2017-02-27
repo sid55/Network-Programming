@@ -32,5 +32,8 @@ This is the output file that will be created after running this program. You may
 this file with the original file. It will be labeled as filename.out where filename is
 the file you are looking for on the server(s).
 
+server-info.text
+This file has the list of servers that the client is able to communicate with
+
 client server
 The names of the executables that are created when compiling the client and the server
