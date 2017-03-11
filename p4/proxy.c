@@ -28,6 +28,7 @@ typedef struct{
     struct sockaddr_in servaddr; //address of server
     int listenfd, connfd; //file descriptors
     FILE *reader; //file reader to read forbidden list of websites 
+    char proxyAddr[MAXLINE];
 }Thread;
 
 //Thread pointer created -> pointer to an array of structs
@@ -106,6 +107,17 @@ void createServer(const char *portnum){
     servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
     servaddr.sin_port = htons(port); //sets the port number here
 
+    //convert in_addr_t to char* with ip addr of proxy
+    in_addr_t x = servaddr.sin_addr.s_addr;
+    char *z;
+    z = inet_ntoa(*(struct in_addr *)&x);
+
+    //have each thread struct hold the proxy address
+    int i = 0;
+    while (i <maxThreads){
+        sprintf(thread_pnt[i].proxyAddr, "%s", z); 
+        i++;
+    }
 }
 
 /*
@@ -202,6 +214,7 @@ void *readWriteServer(void *threadInfoTemp){
 
                 printf("website is: %s\n", website);
                 //printf("http type is: %s\n", http); 
+
    
                 //get rid of http(s) and add in www and get rid of last '/' 
                 char web[MAXLINE]; char httpFront[MAXLINE]; char httpsFront[MAXLINE];
@@ -232,6 +245,7 @@ void *readWriteServer(void *threadInfoTemp){
                     printf("The website created: %s\n", web);  
                 }
 
+
                 //make sure website is not part of forbidden list
                 int boolean = 0; //is true
                 char line[MAXLINE];
@@ -242,9 +256,9 @@ void *readWriteServer(void *threadInfoTemp){
                     } 
                 }
                 if (boolean == 1){
-                    //SEND: send message back to browser that website cannot be used because it is in forbidden list
-    
+                    //SEND: send message back to browser that website cannot be used because it is in forbidden list    
                 }else{
+
 
                     //get ip address out of website url
                     struct hostent *he;
@@ -284,18 +298,31 @@ void *readWriteServer(void *threadInfoTemp){
                         exit(1);
                     }
 
+
+                    //Add in forwarded header to send request and convert browser 
+                    //addr to char *
+                    char forwarded[MAXLINE];
+                    bzero(forwarded, MAXLINE);
+                    in_addr_t x = browseraddr.sin_addr.s_addr;
+                    char *z;
+                    z = inet_ntoa(*(struct in_addr *)&x);
+                    printf("The browser addr is: %s\n", z);
+                    sprintf(forwarded, "Forwarded: for=%s; proto=http; by=%s", z,threadInfo->proxyAddr);
+                    sprintf(sendBuff + strlen(sendBuff), "%s", forwarded);
+
+                    printf("sendBuff is: %s\n", sendBuff);
+
                     if( send(sockfd , sendBuff , strlen(sendBuff) , 0) < 0)
                     {
                         printf("Send failed\n");
                         exit(1);     
-                    } 
-                
+                    }                 
                     int recfd2;
                     char recvBuff[MAXLINE];
                     bzero(recvBuff, MAXLINE);
                     while( (recfd2 = recv(sockfd , recvBuff , MAXLINE , 0)) > 0)
                     {
-                            printf("Recieved data: %s\n", recvBuff); 
+                            //printf("Recieved data: %s\n", recvBuff); 
                     }
                     printf("Done with recieving data with ip: %s recvfd: %d\n", ip, recfd2); 
                     
