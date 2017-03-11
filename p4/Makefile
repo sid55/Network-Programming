@@ -1,9 +1,7 @@
 #Makefile
 
-all: proxy 
+all: proxy.c
+	gcc -pthread proxy.c -o proxy
 
-udp-send: proxy.c 
-	gcc proxy.c -o proxy
-
-clean:
-	rm -f proxy 
+clean: 
+	rm -f proxy

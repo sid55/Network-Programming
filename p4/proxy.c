@@ -5,17 +5,39 @@
 #include <sys/socket.h>
 #include <strings.h>
 #include <unistd.h>
+#include <netdb.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <string.h>
+#include <pthread.h>
+#include <errno.h>
 
-#define MAXLINE2 4096 //size of bytes for the buffer
+#define MAXLINE 9216 //size of bytes for the buffer
 #define LISTENQ 1024 //size of the listening queue of clients
 
-int     listenfd, connfd,read_size; //the listen and accept file desciptors
-struct sockaddr_in servaddr; //the server address
-char    recvBuff[MAXLINE2], sendBuff[MAXLINE2]; //the buffer which reads and sends lines
-int port; //server port number
+int maxThreads = 512;
+int threadIndex = 0;
+struct sockaddr_in servaddr;
+
+
+typedef struct{
+    //Changed from MAXLINE + 1 to MAXLINE and 1024 to MAXLINE
+    char recvline[MAXLINE]; //the recieve buffer 
+    char sendline[MAXLINE]; //the send buffer
+    int thread_id; //the thread id
+    struct sockaddr_in servaddr;
+    int listenfd, connfd;
+}Thread;
+
+//Thread pointer created -> pointer to an array of structs
+Thread *thread_pnt;
+
+//Pointer to array of pthread_t variables
+pthread_t *thread_pnt2;
+
+//The mutex lock variable
+pthread_mutex_t lock;
+
 
 /*
  * This method checks the number of arguments when running
@@ -27,6 +49,12 @@ void numArgs(int argc){
         perror("usage: a.out <listen-port> <forbidden-sites-list>\n");
         exit(1);
     }
+
+    //Set up two pointer arrays, one for pthread_t variables and
+    //other for the Thread array of structs
+    thread_pnt = (Thread*)malloc(maxThreads*sizeof(Thread));
+    thread_pnt2 = (pthread_t*)malloc(maxThreads*sizeof(pthread_t));
+
 }
 
 
@@ -37,12 +65,15 @@ void numArgs(int argc){
  * this socket. If no error, the listenfd is returned.
  */
 int createListenSocket(){
+    int listenfd;
     listenfd = socket(AF_INET, SOCK_STREAM, 0);
     if (listenfd < 0){
         perror("socket error\n");
         exit(1);
     }
     return listenfd;
+    
+    printf("Created listening socket\n");
 }
 
 /*
@@ -51,11 +82,13 @@ int createListenSocket(){
  * user.  
  */
 void createServer(const char *portnum){
+    int port;
     sscanf(portnum,"%d",&port); //converts portnum to int
     bzero(&servaddr, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
     servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
     servaddr.sin_port = htons(port); //sets the port number here
+
 }
 
 /*
@@ -69,7 +102,8 @@ void bindServer(int listenfd){
     if (bindID < 0){
         perror("bind error\n");
         exit(1);
-    } 
+    }
+  
 }
 
 /*
@@ -82,23 +116,8 @@ void listenServer(int listenfd){
     if (listenID < 0){
         perror("listen error\n");
         exit(1);
-    } 
-}
+    }
 
-/*
- * This method uses the accept system call which finds a diff
- * port on the server for the client to communicate with.
- * This is to allow other clients to communicate with the 
- * server's port while the original client can still communicate 
- * with the server. An error is thrown if a problem occurs.
- */
-int acceptServer(int listenfd){
-        connfd = accept(listenfd, (struct sockaddr *) NULL, NULL);
-        if (connfd < 0){
-            perror("accept error\n");
-            exit(1);
-        } 
-        return connfd;
 }
 
 /*
@@ -110,31 +129,167 @@ int acceptServer(int listenfd){
  * gets sent to a buffer. This buffer is then sent to the client
  * who prints the output onto the screen.
  */
-void readWriteServer(int connfd, int listenfd){
+void *readWriteServer(void *threadInfoTemp){
+  Thread *threadInfo = (Thread *)threadInfoTemp;
+  while(1){
+      //accept connection here
+      int connfd;
+      connfd = accept(threadInfo->listenfd, (struct sockaddr *) NULL, NULL);
+      if (connfd < 0){
+          perror("accept error\n");
+          exit(1);
+      }
 
+      //initialize vals of thread
+      bzero(threadInfo->recvline, MAXLINE);
+      bzero(threadInfo->sendline, MAXLINE);
+      threadInfo->connfd = connfd;
 
-  while( (read_size = recv(connfd , recvBuff , MAXLINE2 , 0)) > 0 ){
-    printf ("Recieved data: %s \n", recvBuff);
-    bzero(recvBuff, MAXLINE2);    
+      //create browseraddr struct here
+      struct sockaddr_in browseraddr;
+      uint32_t addrlen = sizeof(browseraddr); //length of addresses
+      struct timeval tv;
+
+      int read_size = 0;
+
+      //set timeout value for read from browser
+      tv.tv_sec = 5;
+      tv.tv_usec = 0;
+      setsockopt(threadInfo->connfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(struct timeval)); 
+ 
+      while( (read_size = recvfrom(threadInfo->connfd, threadInfo->recvline, MAXLINE, 0, (struct sockaddr *)&browseraddr, &addrlen)) > 0 ){
+        if (read_size > 9000){
+            printf("Invalid address\n");
+            //Need to send message back to browser of: too long url
+        }else{
+
+            char command[MAXLINE]; char website[MAXLINE]; char http[MAXLINE]; 
+			bzero(command,MAXLINE);
+			bzero(website,MAXLINE);
+            bzero(http, MAXLINE);
+			char * pch;
+			pch = strtok(threadInfo->recvline," ");
+			strcpy(command,pch);
+        
+            if (strncmp(command, "GET", 3) == 0){
+                printf("Came into GET part\n");
+
+                //parse website and http type of 1.1 or 1.0
+                pch = strtok(NULL, " ");
+			    strcpy(website,pch);
+			    pch = strtok(NULL, " ");
+			    strcpy(http,pch);
+
+                printf("website is: %s\n", website);
+                //printf("http type is: %s\n", http); 
+   
+                //get rid of http(s) and add in www and get rid of last '/' 
+                char web[MAXLINE]; char httpFront[MAXLINE]; char httpsFront[MAXLINE];
+                bzero(web, MAXLINE);
+                bzero(httpFront, MAXLINE);
+                bzero(httpsFront, MAXLINE);
+                memcpy(httpFront, &website[0], 7);
+                memcpy(httpsFront, &website[0], 8);
+                //printf("httpFront is: %s httpsFront is: %s \n", httpFront, httpsFront); 
+
+                if (strncmp(httpsFront, "https://", 8) == 0){
+                    size_t lenWebsite = strlen(website);
+                    
+                    //memcpy(
+
+                }else if (strncmp(httpFront, "http://", 7) == 0){
+                    size_t lenWebsite = strlen(website);
+                    int lastChar = (int)lenWebsite - 1;
+                    int lengthToRead = lastChar - 7;
+                    //printf ("char at last index is: %c\n", website[((int)lenWebsite) - 1]);
+                    //printf("lastChar is: %d\n", lastChar);
+                    char substring[MAXLINE];
+                    bzero(substring, MAXLINE);
+                    memcpy(substring, &website[7], lengthToRead);
+                    //printf("Substring recvievd is: %s\n", substring);
+                    sprintf(web, "www.");
+                    sprintf(web + strlen(web),"%s%s",substring,".com");  
+                    printf("The website created: %s\n", web);  
+                }
+
+                struct hostent *he;
+                struct in_addr **addr_list;
+                char ip[MAXLINE];
+                bzero(ip, MAXLINE);
+                int i;
+                if ( (he = gethostbyname(web) ) == NULL){
+                    printf("Cannot resolve address\n");
+                    //send message back to client that website is non existant
+                }
+                addr_list = (struct in_addr **) he->h_addr_list;
+                for (i = 0; addr_list[i] != NULL; i++){
+                    strcpy(ip, inet_ntoa(*addr_list[i]));
+                    break;
+                } 
+                printf ("No problems ip is: %s\n", ip);
+            
+
+            }else if(strncmp(command, "HEAD", 4) == 0){
+                printf("Came into HEAD part\n");
+            }else{
+                //send message back to client of can't do intruction
+                printf("Not a valid instruction\n");
+            }
+
+ 
+            bzero(threadInfo->recvline, MAXLINE); 
+        }   
+      }
+
+      if (read_size == 0){
+        printf ("Done receiving data \n");
+        //Maybe this not needed?
+      }
+
+      if (read_size < 0){
+        //Need to send message back to browser of: waited too long for browser message
+        //					                       to reach proxy instead of breaking
+        printf ("Thread has timed out on the socket recvFrom\n");
+      }
+
+      //Now need to connect to different server and send data and wait for response
+
+    close(connfd);
   }
-
-  printf ("Done receiving data \n");
+  return NULL;
 }
 
 /*
- * This method allows the connection to the server to happen
- * for the client with the accept system call. It then calls
- * the main meat of this program, readWriteServer which is 
- * a method that is briefly explained above. There is a while
- * loop to ensure that when the client exits, a new connection
- * can be established with the server.
+ * This method uses the accept system call which finds a diff
+ * port on the server for the client to communicate with.
+ * This is to allow other clients to communicate with the 
+ * server's port while the original client can still communicate 
+ * with the server. An error is thrown if a problem occurs.
  */
-void acceptReadWriteServer(int listenfd){
-  while(1){
-    int connfd = acceptServer(listenfd);
-    readWriteServer(connfd, listenfd); //contains code for receiving and sending data
-  }
+int acceptServer(int listenfd){
+    while(1){ 
+        int i = 0;
+        while (i < maxThreads){ 
+             thread_pnt[i].listenfd = listenfd; 
+             if(pthread_create(&thread_pnt2[i],NULL,readWriteServer,&thread_pnt[i])){
+                 printf("problem creating a thread\n");
+                 exit(1);
+             }
+             i++; 
+        } 
+
+        i = 0;
+        while (i < maxThreads){
+             if(pthread_join(thread_pnt2[i],NULL)){
+                 printf("problem joining a thread\n");
+                 exit(1);
+             } 
+             i++;
+        }
+
+    }
 }
+
 
 
 /*
@@ -149,6 +304,6 @@ main(int argc, char **argv)
   createServer(argv[1]);
   bindServer(listenfd);
   listenServer(listenfd);
-  acceptReadWriteServer(listenfd); 
+  acceptServer(listenfd);
   return 0;
 }   
