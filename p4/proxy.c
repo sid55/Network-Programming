@@ -306,9 +306,9 @@ void *readWriteServer(void *threadInfoTemp){
                     in_addr_t x = browseraddr.sin_addr.s_addr;
                     char *z;
                     z = inet_ntoa(*(struct in_addr *)&x);
-                    printf("The browser addr is: %s\n", z);
+                    //printf("The browser addr is: %s\n", z);
                     sprintf(forwarded, "Forwarded: for=%s; proto=http; by=%s", z,threadInfo->proxyAddr);
-                    sprintf(sendBuff + strlen(sendBuff), "%s", forwarded);
+                    //sprintf(sendBuff + strlen(sendBuff), "%s\r\n", forwarded); //comment this line = more recieve??
 
                     printf("sendBuff is: %s\n", sendBuff);
 
@@ -322,9 +322,17 @@ void *readWriteServer(void *threadInfoTemp){
                     bzero(recvBuff, MAXLINE);
                     while( (recfd2 = recv(sockfd , recvBuff , MAXLINE , 0)) > 0)
                     {
-                            //printf("Recieved data: %s\n", recvBuff); 
+                            printf("Recieved data: %s\n", recvBuff);
+                            //if (sendto(fd, sendBuff, strlen(sendBuff), 0, (struct sockaddr *)&remaddr, addrlen) < 0)
+                            if(sendto(threadInfo->connfd , recvBuff , strlen(recvBuff) , 0, (struct sockaddr *)&browseraddr, addrlen) < 0)
+                            {
+                                printf("Send failed\n");
+                                exit(1);     
+                            } 
+                            bzero(recvBuff, MAXLINE); 
                     }
-                    printf("Done with recieving data with ip: %s recvfd: %d\n", ip, recfd2); 
+                    printf("Done with recieving data with ip: %s recvfd: %d\n", ip, recfd2);
+                    close(sockfd); 
                     
                 }
 
