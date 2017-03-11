@@ -181,12 +181,12 @@ void *readWriteServer(void *threadInfoTemp){
             //SEND: Need to send message back to browser of: too long url
         }else{
 
-            char command[MAXLINE]; char website[MAXLINE]; char http[MAXLINE]; char recvBuff[MAXLINE]; 
+            char command[MAXLINE]; char website[MAXLINE]; char http[MAXLINE]; char sendBuff[MAXLINE]; 
 			bzero(command,MAXLINE);
 			bzero(website,MAXLINE);
             bzero(http, MAXLINE);
-            bzero(recvBuff, MAXLINE);
-            sprintf(recvBuff, "%s", threadInfo->recvline);
+            bzero(sendBuff, MAXLINE);
+            sprintf(sendBuff, "%s", threadInfo->recvline);
 			char * pch;
 			pch = strtok(threadInfo->recvline," ");
 			strcpy(command,pch);
@@ -217,8 +217,8 @@ void *readWriteServer(void *threadInfoTemp){
                     char substring[MAXLINE];
                     bzero(substring, MAXLINE);
                     memcpy(substring, &website[8], lengthToRead);
-                    sprintf(web, "www.");
-                    sprintf(web + strlen(web),"%s%s",substring,".com");  
+                    sprintf(web, "%s", substring);
+                    //sprintf(web + strlen(web),"%s",substring);  
                     printf("The website created: %s\n", web);  
                 }else if (strncmp(httpFront, "http://", 7) == 0){
                     size_t lenWebsite = strlen(website);
@@ -227,11 +227,10 @@ void *readWriteServer(void *threadInfoTemp){
                     char substring[MAXLINE];
                     bzero(substring, MAXLINE);
                     memcpy(substring, &website[7], lengthToRead);
-                    sprintf(web, "www.");
-                    sprintf(web + strlen(web),"%s%s",substring,".com");  
+                    sprintf(web, "%s", substring);
+                    //sprintf(web + strlen(web),"%s",substring);  
                     printf("The website created: %s\n", web);  
                 }
-
 
                 //make sure website is not part of forbidden list
                 int boolean = 0; //is true
@@ -264,10 +263,42 @@ void *readWriteServer(void *threadInfoTemp){
                         } 
                     }
 
-                    //ip address in = ip
-                    //recvBuff has all info 
-                    printf("the recvBuff is: %s\n", recvBuff);
 
+                    //create new socket and set up server info and connect
+                    //SEND: send error message back instead of exiting
+                    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+                    if (sockfd < 0){
+                        printf("socket error\n");
+                        exit(1);
+                    }
+                    struct sockaddr_in servaddr2; //address of actual server proxy is connecting to 
+                    bzero(&servaddr2, sizeof(servaddr2));
+                    servaddr2.sin_family = AF_INET;
+                    servaddr2.sin_port = htons(80); //port number being set 
+                    if (inet_pton(AF_INET, ip, &servaddr2.sin_addr) <= 0){
+                        printf("inet_pton error\n");
+                        exit(1);
+                    }
+                    if (connect(sockfd, (struct sockaddr *) &servaddr2, sizeof(servaddr2)) < 0){
+                        printf("connecting error\n");
+                        exit(1);
+                    }
+
+                    if( send(sockfd , sendBuff , strlen(sendBuff) , 0) < 0)
+                    {
+                        printf("Send failed\n");
+                        exit(1);     
+                    } 
+                
+                    int recfd2;
+                    char recvBuff[MAXLINE];
+                    bzero(recvBuff, MAXLINE);
+                    while( (recfd2 = recv(sockfd , recvBuff , MAXLINE , 0)) > 0)
+                    {
+                            printf("Recieved data: %s\n", recvBuff); 
+                    }
+                    printf("Done with recieving data with ip: %s recvfd: %d\n", ip, recfd2); 
+                    
                 }
 
             }else if(strncmp(command, "HEAD", 4) == 0){
