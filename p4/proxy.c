@@ -15,7 +15,7 @@
 #define MAXLINE 9216 //size of bytes for the buffer
 #define LISTENQ 1024 //size of the listening queue of clients
 
-int maxThreads = 512;
+int maxThreads = 256;
 int threadIndex = 0;
 struct sockaddr_in servaddr;
 
@@ -25,8 +25,9 @@ typedef struct{
     char recvline[MAXLINE]; //the recieve buffer 
     char sendline[MAXLINE]; //the send buffer
     int thread_id; //the thread id
-    struct sockaddr_in servaddr;
-    int listenfd, connfd;
+    struct sockaddr_in servaddr; //address of server
+    int listenfd, connfd; //file descriptors
+    FILE *reader; //file reader to read forbidden list of websites 
 }Thread;
 
 //Thread pointer created -> pointer to an array of structs
@@ -57,6 +58,22 @@ void numArgs(int argc){
 
 }
 
+/*
+ * This method sets up some of the parts of the thread array. It loops
+ * through the elements setting up some elements
+ */
+void setUpThreadArray(const char *forbiddenList){
+    int i = 0;
+    while (i < maxThreads){
+        thread_pnt[i].thread_id = i;
+        thread_pnt[i].reader = fopen(forbiddenList,"r");
+        if (thread_pnt[i].reader == NULL){
+            printf("The forbidden list is nonexistant\n");
+            exit(1);
+        } 
+        i++;
+    }
+}
 
 /*
  * This method creates a socket on the server. This
@@ -133,6 +150,7 @@ void *readWriteServer(void *threadInfoTemp){
   Thread *threadInfo = (Thread *)threadInfoTemp;
   while(1){
       //accept connection here
+
       int connfd;
       connfd = accept(threadInfo->listenfd, (struct sockaddr *) NULL, NULL);
       if (connfd < 0){
@@ -153,20 +171,22 @@ void *readWriteServer(void *threadInfoTemp){
       int read_size = 0;
 
       //set timeout value for read from browser
-      tv.tv_sec = 5;
+      tv.tv_sec = 20;
       tv.tv_usec = 0;
       setsockopt(threadInfo->connfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(struct timeval)); 
  
       while( (read_size = recvfrom(threadInfo->connfd, threadInfo->recvline, MAXLINE, 0, (struct sockaddr *)&browseraddr, &addrlen)) > 0 ){
         if (read_size > 9000){
             printf("Invalid address\n");
-            //Need to send message back to browser of: too long url
+            //SEND: Need to send message back to browser of: too long url
         }else{
 
-            char command[MAXLINE]; char website[MAXLINE]; char http[MAXLINE]; 
+            char command[MAXLINE]; char website[MAXLINE]; char http[MAXLINE]; char recvBuff[MAXLINE]; 
 			bzero(command,MAXLINE);
 			bzero(website,MAXLINE);
             bzero(http, MAXLINE);
+            bzero(recvBuff, MAXLINE);
+            sprintf(recvBuff, "%s", threadInfo->recvline);
 			char * pch;
 			pch = strtok(threadInfo->recvline," ");
 			strcpy(command,pch);
@@ -174,7 +194,7 @@ void *readWriteServer(void *threadInfoTemp){
             if (strncmp(command, "GET", 3) == 0){
                 printf("Came into GET part\n");
 
-                //parse website and http type of 1.1 or 1.0
+                //NEEDED http?: parse website and http type of 1.1 or 1.0
                 pch = strtok(NULL, " ");
 			    strcpy(website,pch);
 			    pch = strtok(NULL, " ");
@@ -190,49 +210,70 @@ void *readWriteServer(void *threadInfoTemp){
                 bzero(httpsFront, MAXLINE);
                 memcpy(httpFront, &website[0], 7);
                 memcpy(httpsFront, &website[0], 8);
-                //printf("httpFront is: %s httpsFront is: %s \n", httpFront, httpsFront); 
-
                 if (strncmp(httpsFront, "https://", 8) == 0){
                     size_t lenWebsite = strlen(website);
-                    
-                    //memcpy(
-
+                    int lastChar = (int)lenWebsite - 1;
+                    int lengthToRead = lastChar - 8;
+                    char substring[MAXLINE];
+                    bzero(substring, MAXLINE);
+                    memcpy(substring, &website[8], lengthToRead);
+                    sprintf(web, "www.");
+                    sprintf(web + strlen(web),"%s%s",substring,".com");  
+                    printf("The website created: %s\n", web);  
                 }else if (strncmp(httpFront, "http://", 7) == 0){
                     size_t lenWebsite = strlen(website);
                     int lastChar = (int)lenWebsite - 1;
                     int lengthToRead = lastChar - 7;
-                    //printf ("char at last index is: %c\n", website[((int)lenWebsite) - 1]);
-                    //printf("lastChar is: %d\n", lastChar);
                     char substring[MAXLINE];
                     bzero(substring, MAXLINE);
                     memcpy(substring, &website[7], lengthToRead);
-                    //printf("Substring recvievd is: %s\n", substring);
                     sprintf(web, "www.");
                     sprintf(web + strlen(web),"%s%s",substring,".com");  
                     printf("The website created: %s\n", web);  
                 }
 
-                struct hostent *he;
-                struct in_addr **addr_list;
-                char ip[MAXLINE];
-                bzero(ip, MAXLINE);
-                int i;
-                if ( (he = gethostbyname(web) ) == NULL){
-                    printf("Cannot resolve address\n");
-                    //send message back to client that website is non existant
+
+                //make sure website is not part of forbidden list
+                int boolean = 0; //is true
+                char line[MAXLINE];
+                bzero(line, MAXLINE);
+                while(fgets(line, MAXLINE, (FILE *)threadInfo->reader)){
+                    if (strncmp(line, web, (int)strlen(web)) == 0){
+                        boolean = 1;
+                    } 
                 }
-                addr_list = (struct in_addr **) he->h_addr_list;
-                for (i = 0; addr_list[i] != NULL; i++){
-                    strcpy(ip, inet_ntoa(*addr_list[i]));
-                    break;
-                } 
-                printf ("No problems ip is: %s\n", ip);
-            
+                if (boolean == 1){
+                    //SEND: send message back to browser that website cannot be used because it is in forbidden list
+    
+                }else{
+
+                    //get ip address out of website url
+                    struct hostent *he;
+                    struct in_addr **addr_list;
+                    char ip[MAXLINE];
+                    bzero(ip, MAXLINE);
+                    int i;
+                    if ( (he = gethostbyname(web) ) == NULL){
+                        printf("Cannot resolve address\n");
+                        //SEND: send message back to client that website is non existant
+                    }else{
+                        addr_list = (struct in_addr **) he->h_addr_list;
+                        for (i = 0; addr_list[i] != NULL; i++){
+                            strcpy(ip, inet_ntoa(*addr_list[i]));
+                            break;
+                        } 
+                    }
+
+                    //ip address in = ip
+                    //recvBuff has all info 
+                    printf("the recvBuff is: %s\n", recvBuff);
+
+                }
 
             }else if(strncmp(command, "HEAD", 4) == 0){
                 printf("Came into HEAD part\n");
             }else{
-                //send message back to client of can't do intruction
+                //SEND: send message back to client of can't do intruction
                 printf("Not a valid instruction\n");
             }
 
@@ -247,7 +288,7 @@ void *readWriteServer(void *threadInfoTemp){
       }
 
       if (read_size < 0){
-        //Need to send message back to browser of: waited too long for browser message
+        //SEND: Need to send message back to browser of: waited too long for browser message
         //					                       to reach proxy instead of breaking
         printf ("Thread has timed out on the socket recvFrom\n");
       }
@@ -300,6 +341,7 @@ int
 main(int argc, char **argv)
 {
   numArgs(argc);
+  setUpThreadArray(argv[2]);
   int listenfd = createListenSocket(); //the file desriptor for the socket on server
   createServer(argv[1]);
   bindServer(listenfd);
