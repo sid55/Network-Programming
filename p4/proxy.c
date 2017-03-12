@@ -193,12 +193,14 @@ void *readWriteServer(void *threadInfoTemp){
             //SEND: Need to send message back to browser of: too long url
         }else{
 
-            char command[MAXLINE]; char website[MAXLINE]; char http[MAXLINE]; char sendBuff[MAXLINE]; 
+            char command[MAXLINE]; char website[MAXLINE]; char http[MAXLINE]; char sendBuff[MAXLINE]; char sendBuff2[MAXLINE]; 
 			bzero(command,MAXLINE);
 			bzero(website,MAXLINE);
             bzero(http, MAXLINE);
             bzero(sendBuff, MAXLINE);
+            bzero(sendBuff2, MAXLINE);
             sprintf(sendBuff, "%s", threadInfo->recvline);
+            sprintf(sendBuff2, "%s", threadInfo->recvline);
 			char * pch;
 			pch = strtok(threadInfo->recvline," ");
 			strcpy(command,pch);
@@ -207,18 +209,24 @@ void *readWriteServer(void *threadInfoTemp){
                 printf("Came into GET part\n");
 
                 //NEEDED http?: parse website and http type of 1.1 or 1.0
-                pch = strtok(NULL, " ");
-			    strcpy(website,pch);
-			    pch = strtok(NULL, " ");
-			    strcpy(http,pch);
+                //pch = strtok(NULL, " ");
+			    //strcpy(website,pch);
+			    //pch = strtok(NULL, " ");
+			    //strcpy(http,pch);
 
-                printf("website is: %s\n", website);
+                //printf("website is: %s\n", website);
                 //printf("http type is: %s\n", http); 
 
-   
+  
                 //get rid of http(s) and add in www and get rid of last '/' 
-                char web[MAXLINE]; char httpFront[MAXLINE]; char httpsFront[MAXLINE];
+                char web[MAXLINE]; //char httpFront[MAXLINE]; char httpsFront[MAXLINE];
                 bzero(web, MAXLINE);
+
+                char *pch2; 
+                pch2 = strtok(NULL, "\n");
+                strcpy(web, pch2);
+                printf("web created is: %s", web);
+                /*
                 bzero(httpFront, MAXLINE);
                 bzero(httpsFront, MAXLINE);
                 memcpy(httpFront, &website[0], 7);
@@ -244,8 +252,14 @@ void *readWriteServer(void *threadInfoTemp){
                     //sprintf(web + strlen(web),"%s",substring);  
                     printf("The website created: %s\n", web);  
                 }
+                */
 
-
+                //added in www
+                char webTemp[MAXLINE];
+                bzero(webTemp, MAXLINE);
+                sprintf(webTemp,"www.%s",web);
+                printf("webstemp created: %s", webTemp);
+                exit(1);
                 //make sure website is not part of forbidden list
                 int boolean = 0; //is true
                 char line[MAXLINE];
@@ -308,7 +322,7 @@ void *readWriteServer(void *threadInfoTemp){
                     z = inet_ntoa(*(struct in_addr *)&x);
                     //printf("The browser addr is: %s\n", z);
                     sprintf(forwarded, "Forwarded: for=%s; proto=http; by=%s", z,threadInfo->proxyAddr);
-                    //sprintf(sendBuff + strlen(sendBuff), "%s\r\n", forwarded); //comment this line = more recieve??
+                    //sprintf(sendBuff + strlen(sendBuff), "%s", forwarded); //comment this line = more recieve??
 
                     printf("sendBuff is: %s\n", sendBuff);
 
@@ -340,7 +354,7 @@ void *readWriteServer(void *threadInfoTemp){
                 printf("Came into HEAD part\n");
             }else{
                 //SEND: send message back to client of can't do intruction
-                printf("Not a valid instruction\n");
+                printf("Not a valid instruction/command: %s\n",command);
             }
 
  
