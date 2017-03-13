@@ -334,79 +334,18 @@ void *readWriteServer(void *threadInfoTemp){
 		   
 
 		    if((n = getaddrinfo(web,"80",&hints, &res)) != 0){
-			printf("Did no get address info\n");
-			exit(1);
-		    }
-			   
- 
-		    do{
-			sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-			if (sockfd < 0)
-				continue;
-
-			if(connect (sockfd, res->ai_addr, res->ai_addrlen) == 0)
-				break;
-	
-			close(sockfd);
-		    }while((res = res->ai_next) != NULL);
-
-		    if (res == NULL){
-			printf("tcp connect error\n");
-			exit(1);
-		    }
-
-		    if(send(sockfd , sendBuff , MAXLINE , 0) < 0)
-		    {
-			printf("Send failed\n");
-			exit(1);     
-		    } 
-
-		    int recfd2;
-		    char recvBuff[MAXLINE];
-		    bzero(recvBuff, MAXLINE);
-		    //set timeout value for read from browser
-		    tv.tv_sec = 8;
-		    tv.tv_usec = 0;
-		    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(struct timeval)); 
-		    if( (recfd2 = recv(sockfd , recvBuff , MAXLINE , 0)) > 0)
-		    {
-			    /*
-			    char copy[MAXLINE]; char status[MAXLINE];
-			    sprintf(copy, "%s", recvBuff);
-			    char *pch3; 
-			    pch3 = strtok(copy, " ");
-			    pch3 = strtok(NULL, " ");
-			    strcpy(status, pch3);
-			    int statusNum = atoi(status);
-			    */ 			   
-
-			    //if (statusNum == 200){ 
-				    printf("the value of recfd2 is: %d\n", recfd2);
-				    printf("Recieved data: %s\n", recvBuff);
-				    if(send(connfd , recvBuff , MAXLINE	 , 0) < 0)
-				    {
-					printf("Send failed when sending to browser\n");
-					exit(1);     
-				    } 
-			    //}
-			    bzero(recvBuff, MAXLINE);
-			    //bzero(copy, MAXLINE);
-			    //bzero(status, MAXLINE); 
-		    }
-		    if (recfd2 < 0){
-			//Send an error back to server of too long wait
 			char errorMsg[MAXLINE];
 			bzero(errorMsg, MAXLINE);
 			sprintf(errorMsg,
-			"HTTP/1.0 504 Gateway Timeout\r\n\
+			"HTTP/1.0 404 Not Found\r\n\
 			Content-Type: text/html\r\n\
 			Connection: close\r\n\n\
 			<html>\r\n\
 				<head>\r\n\
-					<title>504 - Gateway Timeout</title>\r\n\
+					<title>404 - Not Found</title>\r\n\
 				</head>\r\n\
 				<body>\r\n\
-					<h1>504 - Gateway Timeout</h1>\r\n\
+					<h1>404 - Not Found</h1>\r\n\
 				</body>\r\n\
 			</html>");
 	
@@ -415,10 +354,88 @@ void *readWriteServer(void *threadInfoTemp){
 				printf("Send failed when sending to browser\n");
 				exit(1);     
 			}
+		    }else{ 
+			    do{
+				sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+				if (sockfd < 0)
+					continue;
 
-		    }
-		    printf("Done with recieving data with recvfd: %d\n", recfd2);
-		    close(sockfd);  
+				if(connect (sockfd, res->ai_addr, res->ai_addrlen) == 0)
+					break;
+		
+				close(sockfd);
+			    }while((res = res->ai_next) != NULL);
+
+			    if (res == NULL){
+				printf("tcp connect error\n");
+				exit(1);
+			    }
+
+			    if(send(sockfd , sendBuff , MAXLINE , 0) < 0)
+			    {
+				printf("Send failed\n");
+				exit(1);     
+			    } 
+
+			    int recfd2;
+			    char recvBuff[MAXLINE];
+			    bzero(recvBuff, MAXLINE);
+			    //set timeout value for read from browser
+			    tv.tv_sec = 8;
+			    tv.tv_usec = 0;
+			    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(struct timeval)); 
+			    if( (recfd2 = recv(sockfd , recvBuff , MAXLINE , 0)) > 0)
+			    {
+				    /*
+				    char copy[MAXLINE]; char status[MAXLINE];
+				    sprintf(copy, "%s", recvBuff);
+				    char *pch3; 
+				    pch3 = strtok(copy, " ");
+				    pch3 = strtok(NULL, " ");
+				    strcpy(status, pch3);
+				    int statusNum = atoi(status);
+				    */ 			   
+
+				    //if (statusNum == 200){ 
+					    printf("the value of recfd2 is: %d\n", recfd2);
+					    printf("Recieved data: %s\n", recvBuff);
+					    if(send(connfd , recvBuff , MAXLINE	 , 0) < 0)
+					    {
+						printf("Send failed when sending to browser\n");
+						exit(1);     
+					    } 
+				    //}
+				    bzero(recvBuff, MAXLINE);
+				    //bzero(copy, MAXLINE);
+				    //bzero(status, MAXLINE); 
+			    }
+			    if (recfd2 < 0){
+				//Send an error back to server of too long wait
+				char errorMsg[MAXLINE];
+				bzero(errorMsg, MAXLINE);
+				sprintf(errorMsg,
+				"HTTP/1.0 504 Gateway Timeout\r\n\
+				Content-Type: text/html\r\n\
+				Connection: close\r\n\n\
+				<html>\r\n\
+					<head>\r\n\
+						<title>504 - Gateway Timeout</title>\r\n\
+					</head>\r\n\
+					<body>\r\n\
+						<h1>504 - Gateway Timeout</h1>\r\n\
+					</body>\r\n\
+				</html>");
+		
+				if(send(connfd , errorMsg , MAXLINE , 0) < 0)
+				{
+					printf("Send failed when sending to browser\n");
+					exit(1);     
+				}
+
+			    }
+			    printf("Done with recieving data with recvfd: %d\n", recfd2);
+			    close(sockfd);
+		    }  
 		}
 
 	    }else if(strncmp(command, "HEAD", 4) == 0){
