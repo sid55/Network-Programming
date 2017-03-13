@@ -9,6 +9,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <string.h>
+#include <pthread.h>
 #include <errno.h>
 
 #define MAXLINE 9216 //size of bytes for the buffer
@@ -109,9 +110,9 @@ void readWriteServer(int listenfd){
           exit(1);
       }
 
-      //pid = fork(); 
-      //if (pid == 0){ 
-	      //printf("in child process\n");
+      pid = fork(); 
+      if (pid == 0){ 
+	      printf("in child process\n");
 	      //initialize buffers
 	      char recvline[MAXLINE]; char sendline[MAXLINE];
 	      bzero(recvline, MAXLINE);
@@ -150,8 +151,6 @@ void readWriteServer(int listenfd){
 			strcpy(webTemp, pch2);
 			int len = (int)strlen(webTemp) - 1;
 			memcpy(web, &webTemp[0], len);
-
-			printf("website is: %s length: %d\n", web, (int)strlen(web));
 			
 			/*
 			//make sure website is not part of forbidden list
@@ -170,6 +169,12 @@ void readWriteServer(int listenfd){
 			    //SEND: send message back to browser that website cannot be used because it is in forbidden list    
 			}else{
 
+			    //int temp = 10;
+			    //while (temp > 0){
+			    //	printf("found problem??\n");
+		            //		temp--;
+			    //}
+			
 			    int sockfd, n;
 			    struct addrinfo hints, *res;
 			    bzero(&hints, sizeof(struct addrinfo));
@@ -227,16 +232,16 @@ void readWriteServer(int listenfd){
 			    if( (recfd2 = recv(sockfd , recvBuff , MAXLINE , 0)) > 0)
 			    {
 				    printf("Recieved data: %s\n", recvBuff);
-				    if(send(connfd , recvBuff , strlen(recvBuff), 0) < 0)
+				    if(send(connfd , recvBuff , strlen(recvBuff) , 0) < 0)
 				    {
 					printf("Send failed\n");
 					exit(1);     
-				    }
-				    bzero(recvBuff, MAXLINE);
+				    } 
+				    bzero(recvBuff, MAXLINE); 
 			    }
 			    printf("Done with recieving data with recvfd: %d\n", recfd2);
 			    close(sockfd);
-			}//end useless if statement
+			}
 		    
 		    }else if(strncmp(command, "HEAD", 4) == 0){
 			printf("Came into HEAD part\n");
@@ -248,6 +253,7 @@ void readWriteServer(int listenfd){
 	 	    printf("trace 1\n");
 		    bzero(recvline, MAXLINE); 
 		}
+  		printf("trace 2\n"); 
 	      }
 	      printf("trace 3\n");
 	      if (read_size == 0){
@@ -263,10 +269,10 @@ void readWriteServer(int listenfd){
 
 	    //Now need to connect to different server and send data and wait for response
 	    close(connfd);
-  	//}//close pid == 0
-	//else{
-	//    printf("In parents process\n");
-	//}
+  	}//close pid == 0
+	else{
+	    printf("In parents process\n");
+	}
   }//close inifite while loop
 }//close method
 

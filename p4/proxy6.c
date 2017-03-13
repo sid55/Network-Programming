@@ -150,8 +150,6 @@ void readWriteServer(int listenfd){
 			strcpy(webTemp, pch2);
 			int len = (int)strlen(webTemp) - 1;
 			memcpy(web, &webTemp[0], len);
-
-			printf("website is: %s length: %d\n", web, (int)strlen(web));
 			
 			/*
 			//make sure website is not part of forbidden list
@@ -224,10 +222,10 @@ void readWriteServer(int listenfd){
 			    }
 			    */
 			    
-			    if( (recfd2 = recv(sockfd , recvBuff , MAXLINE , 0)) > 0)
+			    while( (recfd2 = recv(sockfd , recvBuff , MAXLINE , 0)) > 0)
 			    {
 				    printf("Recieved data: %s\n", recvBuff);
-				    if(send(connfd , recvBuff , strlen(recvBuff), 0) < 0)
+				    if(send(connfd , recvBuff , strlen(recvBuff) + 1 , 0) < 0)
 				    {
 					printf("Send failed\n");
 					exit(1);     
@@ -236,7 +234,7 @@ void readWriteServer(int listenfd){
 			    }
 			    printf("Done with recieving data with recvfd: %d\n", recfd2);
 			    close(sockfd);
-			}//end useless if statement
+			}
 		    
 		    }else if(strncmp(command, "HEAD", 4) == 0){
 			printf("Came into HEAD part\n");
@@ -248,6 +246,7 @@ void readWriteServer(int listenfd){
 	 	    printf("trace 1\n");
 		    bzero(recvline, MAXLINE); 
 		}
+  		printf("trace 2\n"); 
 	      }
 	      printf("trace 3\n");
 	      if (read_size == 0){
