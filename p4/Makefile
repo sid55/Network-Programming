@@ -1,7 +1,8 @@
 #Makefile
 
-all: proxy.c
-	gcc proxy.c -o proxy
+all: proxy.c proxy3.c
+	gcc proxy.c -o proxyFake
+	gcc -pthread proxy3.c -o proxy
 
 clean: 
-	rm -f proxy
+	rm -f proxy proxyFake

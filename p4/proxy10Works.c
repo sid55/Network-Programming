@@ -11,7 +11,7 @@
 #include <string.h>
 #include <errno.h>
 
-#define MAXLINE 2048 //size of bytes for the buffer
+#define MAXLINE 9216 //size of bytes for the buffer
 #define LISTENQ 1024 //size of the listening queue of clients
 
 struct sockaddr_in servaddr;
