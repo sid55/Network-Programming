@@ -74,19 +74,10 @@ void numArgs(int argc){
  */
 void setUpThreadArray(const char *forbiddenList){
 
-    /*
-    if (access(forbiddenList,F_OK)==1){
+    if (access("forbiddenList",F_OK)==1){
 	printf("The forbidden list file does not exist\n");
 	exit(1);
     }
-    */
-    FILE *tempo = fopen(forbiddenList, "r");
-    if (tempo == NULL){
-	printf("The forbidden list file does not exist\n");
-	exit(1);
-    }else{
-	fclose(tempo);
-    }	 
 
     int i = 0;
     while (i < maxThreads){
@@ -127,6 +118,17 @@ void createServer(const char *portnum){
     servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
     servaddr.sin_port = htons(port); //sets the port number here
 
+    //convert in_addr_t to char* with ip addr of proxy
+    in_addr_t x = servaddr.sin_addr.s_addr;
+    char *z;
+    z = inet_ntoa(*(struct in_addr *)&x);
+
+    //have each thread struct hold the proxy address
+    int i = 0;
+    while (i <maxThreads){
+        sprintf(thread_pnt[i].proxyAddr, "%s", z); 
+        i++;
+    }
 }
 
 /*
@@ -156,22 +158,6 @@ void listenServer(int listenfd){
         exit(1);
     }
 
-    //convert in_addr_t to char* with ip addr of proxy
-    //in_addr_t x = servaddr.sin_addr.s_addr;
-    //char *z;
-    //z = inet_ntoa(*(struct in_addr *)&x);
-    char z[MAXLINE];
-    bzero(z, MAXLINE);
-    uint32_t tempLen = sizeof(servaddr);
-    int myProxyNum = getsockname(listenfd, (struct sockaddr *)&servaddr, &tempLen);
-    sprintf(z,inet_ntoa(servaddr.sin_addr));
-
-    //have each thread struct hold the proxy address
-    int i = 0;
-    while (i <maxThreads){
-        sprintf(thread_pnt[i].proxyAddr, "%s", z); 
-        i++;
-    }
 }
 
 /*
@@ -189,21 +175,15 @@ void *readWriteServer(void *threadInfoTemp){
       //create browseraddr struct here
       struct sockaddr_in browseraddr;
       uint32_t addrlen = sizeof(browseraddr); //length of addresses
-      bzero(&browseraddr, sizeof(struct sockaddr_in));
 
       //accept connection here
       int connfd;
-      connfd = accept(threadInfo->listenfd, (struct sockaddr *) &browseraddr, &addrlen);
+      connfd = accept(threadInfo->listenfd, (struct sockaddr *) NULL, NULL);
       if (connfd < 0){
           perror("accept error\n");
           exit(1);
       }
       printf("Accpeted thread number: %d\n", threadInfo->thread_id);
-
-      char myBrowserIpaddr[MAXLINE];
-      bzero(myBrowserIpaddr, MAXLINE);
-      int myIpNum = getsockname(connfd, (struct sockaddr *)&browseraddr, &addrlen);
-      sprintf(myBrowserIpaddr,inet_ntoa(browseraddr.sin_addr));
 
       threadInfo->reader = fopen(threadInfo->forbiddenList,"r");
 
@@ -269,7 +249,7 @@ void *readWriteServer(void *threadInfoTemp){
 
 		request_first_line[(int)strlen(request_first_line) - 1] = '\0';
 		FILE *logReader = fopen("access.log", "a");
-		sprintf(logBuf, "%s %s %s 413 %d", timeBuf, myBrowserIpaddr,request_first_line, (int)strlen(errorMsg));
+		sprintf(logBuf, "%s %s 413 %d", timeBuf, request_first_line, (int)strlen(errorMsg));
 		fputs(logBuf, logReader);
 		fputs("\n", logReader);
 		fclose(logReader);
@@ -289,6 +269,8 @@ void *readWriteServer(void *threadInfoTemp){
 	    char * pch;
 	    pch = strtok(threadInfo->recvline," ");
 	    strcpy(command,pch);
+		
+	    printf("the sendBuff is:\n%s\n\n", sendBuff);
 
 	    if (strncmp(command, "GET", 3) == 0){
 		printf("Came into GET part\n");
@@ -361,24 +343,6 @@ void *readWriteServer(void *threadInfoTemp){
 					printf("Send failed when sending to browser\n");
 					exit(1);     
 				}
-				pthread_mutex_lock(&lock);
-				//get current time
-				char timeBuf[MAXLINE];
-				bzero(timeBuf, MAXLINE);
-				time_t rawtime;
-				struct tm *timeinfo;
-				time(&rawtime);
-				timeinfo = localtime(&rawtime);
-				strftime(timeBuf, MAXLINE, "%xT%XZ", timeinfo);
-
-				request_first_line[(int)strlen(request_first_line) - 1] = '\0';
-				FILE *logReader = fopen("access.log", "a");
-				sprintf(logBuf, "%s %s %s 403 %d", timeBuf, myBrowserIpaddr,request_first_line, (int)strlen(errorMsg));
-				fputs(logBuf, logReader);
-				fputs("\n", logReader);
-				fclose(logReader);
-				pthread_mutex_unlock(&lock);
-
 		 
 			}else{
 	
@@ -411,24 +375,6 @@ void *readWriteServer(void *threadInfoTemp){
 					printf("Send failed when sending to browser\n");
 					exit(1);     
 				}
-				pthread_mutex_lock(&lock);
-				//get current time
-				char timeBuf[MAXLINE];
-				bzero(timeBuf, MAXLINE);
-				time_t rawtime;
-				struct tm *timeinfo;
-				time(&rawtime);
-				timeinfo = localtime(&rawtime);
-				strftime(timeBuf, MAXLINE, "%xT%XZ", timeinfo);
-
-				request_first_line[(int)strlen(request_first_line) - 1] = '\0';
-				FILE *logReader = fopen("access.log", "a");
-				sprintf(logBuf, "%s %s %s 404 %d", timeBuf, myBrowserIpaddr,request_first_line, (int)strlen(errorMsg));
-				fputs(logBuf, logReader);
-				fputs("\n", logReader);
-				fclose(logReader);
-				pthread_mutex_unlock(&lock);
-
 			    }else{
 
 				    do{
@@ -464,24 +410,6 @@ void *readWriteServer(void *threadInfoTemp){
 						printf("Send failed when sending to browser\n");
 						exit(1);     
 					}
-					pthread_mutex_lock(&lock);
-					//get current time
-					char timeBuf[MAXLINE];
-					bzero(timeBuf, MAXLINE);
-					time_t rawtime;
-					struct tm *timeinfo;
-					time(&rawtime);
-					timeinfo = localtime(&rawtime);
-					strftime(timeBuf, MAXLINE, "%xT%XZ", timeinfo);
-
-					request_first_line[(int)strlen(request_first_line) - 1] = '\0';
-					FILE *logReader = fopen("access.log", "a");
-					sprintf(logBuf, "%s %s %s 502 %d", timeBuf, myBrowserIpaddr,request_first_line, (int)strlen(errorMsg));
-					fputs(logBuf, logReader);
-					fputs("\n", logReader);
-					fclose(logReader);
-					pthread_mutex_unlock(&lock);
-
 					close(sockfd);
 				    }else{
 
@@ -514,13 +442,9 @@ void *readWriteServer(void *threadInfoTemp){
 
 						    //if (statusNum == 400) 			   
 
-						    //if (statusNum == 200){
-						    	    char myForwardedHeader[MAXLINE];
-							    bzero(myForwardedHeader, MAXLINE);
-							    sprintf(myForwardedHeader, "Forwarded: for=%s; proto=http; by=%s", myBrowserIpaddr, threadInfo->proxyAddr);
-							    printf("forwardedHeader: \n%s\n", myForwardedHeader);  
+						    //if (statusNum == 200){ 
 							    printf("the value of recfd2 is: %d\n", recfd2);
-							    printf("Recieved data: \n%s\n\n", recvBuff);
+							    printf("Recieved data: %s\n", recvBuff);
 							    if(send(connfd , recvBuff , MAXLINE	 , 0) < 0)
 							    {
 								printf("Send failed when sending to browser\n");
@@ -550,34 +474,9 @@ void *readWriteServer(void *threadInfoTemp){
 							        int statusNum = atoi(status);
 
 
-								//get content length
-								/*
-								int myContentLength = 0;
-							  	char contentLength[MAXLINE]; char nameGoal[MAXLINE];
-								bzero(nameGoal, MAXLINE);
-								bzero(contentLength, MAXLINE);
-								if (strncmp(command, "GET", 3) == 0){
-									pch7 = strtok(NULL, "\n");
-									pch7 = strtok(NULL, " ");
-									strcpy(nameGoal, pch7);
-									while(strncmp(nameGoal, "Content-Length:", 15) != 0 ){
-										bzero(nameGoal, MAXLINE);
-										pch7 = strtok(NULL, "\n");
-										pch7 = strtok(NULL, " ");
-										strcpy(nameGoal, pch7);
-										printf("name goal is: %s length: %d\n character:%c", nameGoal, (int)strlen(nameGoal), nameGoal[0]);
-									}
-									pch7 = strtok(NULL, " ");
-									sprintf(contentLength, pch7);
-									printf("The content-lenght is: %s\n", contentLength);
-									myContentLength = atoi(contentLength);	
-								}else{
-									myContentLength = 0;
-								}
-								*/
 								request_first_line[(int)strlen(request_first_line) - 1] = '\0';
 								FILE *logReader = fopen("access.log", "a");
-								sprintf(logBuf, "%s %s %s %d %d", timeBuf, myBrowserIpaddr,request_first_line, statusNum,recfd2);
+								sprintf(logBuf, "%s %s 413 %d", timeBuf, request_first_line, (int)strlen(errorMsg));
 								fputs(logBuf, logReader);
 								fputs("\n", logReader);
 								fclose(logReader);
@@ -610,23 +509,7 @@ void *readWriteServer(void *threadInfoTemp){
 							printf("Send failed when sending to browser\n");
 							exit(1);     
 						}
-						pthread_mutex_lock(&lock);
-						//get current time
-						char timeBuf[MAXLINE];
-						bzero(timeBuf, MAXLINE);
-						time_t rawtime;
-						struct tm *timeinfo;
-						time(&rawtime);
-						timeinfo = localtime(&rawtime);
-						strftime(timeBuf, MAXLINE, "%xT%XZ", timeinfo);
 
-						request_first_line[(int)strlen(request_first_line) - 1] = '\0';
-						FILE *logReader = fopen("access.log", "a");
-						sprintf(logBuf, "%s %s %s 504 %d", timeBuf, myBrowserIpaddr,request_first_line, (int)strlen(errorMsg));
-						fputs(logBuf, logReader);
-						fputs("\n", logReader);
-						fclose(logReader);
-						pthread_mutex_unlock(&lock);
 					    }
 					    printf("Done with recieving data with recvfd: %d\n", recfd2);
 					    close(sockfd);
@@ -639,6 +522,7 @@ void *readWriteServer(void *threadInfoTemp){
 		printf("Came into HEAD part\n");
 	    }else{
 		//SEND: send message back to client of can't do intruction
+		if(strncmp(command, "CONNECT", 7) != 0){
 			char errorMsg[MAXLINE];
 			bzero(errorMsg, MAXLINE);
 			sprintf(errorMsg,
@@ -660,24 +544,8 @@ void *readWriteServer(void *threadInfoTemp){
 				exit(1);     
 			}
 
-			pthread_mutex_lock(&lock);
-			//get current time
-			char timeBuf[MAXLINE];
-			bzero(timeBuf, MAXLINE);
-			time_t rawtime;
-			struct tm *timeinfo;
-			time(&rawtime);
-			timeinfo = localtime(&rawtime);
-			strftime(timeBuf, MAXLINE, "%xT%XZ", timeinfo);
-
-			request_first_line[(int)strlen(request_first_line) - 1] = '\0';
-			FILE *logReader = fopen("access.log", "a");
-			sprintf(logBuf, "%s %s %s 501 %d", timeBuf, myBrowserIpaddr,request_first_line, (int)strlen(errorMsg));
-			fputs(logBuf, logReader);
-			fputs("\n", logReader);
-			fclose(logReader);
-			pthread_mutex_unlock(&lock);
-
+		}
+		printf("Not a valid instruction/command: %s\n",command);
 	    }
  
 	    bzero(threadInfo->recvline, MAXLINE); 
