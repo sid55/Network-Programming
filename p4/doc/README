@@ -1,0 +1,30 @@
+Name: Sidharth Gilela
+ID: sgilela@ucsc.edu
+
+README
+This file contains a brief description of all the files created for this project.
+
+design.pdf
+This file is my design document which holds the information describing this entire project.
+It explains why certain design decisions were made, how the code can be executed, and
+an overall idea of what my code is trying to accomplish.
+
+Makefile
+This file allows the compilation of the proxy. Running make all will compile the proxy 
+while make clean will remove the exectuable
+
+proxy.c
+This file contains all the code that makes up the proxy and allows the proxy to run.
+It allows the proxy to listen in an infinite time waiting for connections from the
+web browser. It provides concurrency with threading.
+
+access.log
+This is the output file that will be created after running this program. This file
+will have all the logging information of any request to the proxy.
+
+forbidden-sites-list
+This file will have a list of websites that the proxy is not allowed to connect and
+retrieve information from
+
+proxy
+This is the name of the executable that is created when running make all
