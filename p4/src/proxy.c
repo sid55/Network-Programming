@@ -110,8 +110,6 @@ int createListenSocket(){
         exit(1);
     }
     return listenfd;
-    
-    printf("Created listening socket\n");
 }
 
 /*
@@ -198,7 +196,6 @@ void *readWriteServer(void *threadInfoTemp){
           perror("accept error\n");
           exit(1);
       }
-      printf("Accpeted thread number: %d\n", threadInfo->thread_id);
 
       char myBrowserIpaddr[MAXLINE];
       bzero(myBrowserIpaddr, MAXLINE);
@@ -230,7 +227,7 @@ void *readWriteServer(void *threadInfoTemp){
 	pch4 = strtok(extraBuff,"\n");
 	strcpy(request_first_line,pch4);
 
-	printf("SEND BUFFER: \n%s\n\n",threadInfo->recvline);
+	printf("Send buffer: \n%s\n\n",threadInfo->recvline);
 
 	if (read_size > 9000){
 	    printf("Invalid address\n");
@@ -265,7 +262,6 @@ void *readWriteServer(void *threadInfoTemp){
 		time(&rawtime);
 		timeinfo = localtime(&rawtime);
 		strftime(timeBuf, MAXLINE, "%xT%XZ", timeinfo);
-		printf("Current time is: %s\n", timeBuf); 
 
 		request_first_line[(int)strlen(request_first_line) - 1] = '\0';
 		FILE *logReader = fopen("access.log", "a");
@@ -283,6 +279,16 @@ void *readWriteServer(void *threadInfoTemp){
 	    bzero(http, MAXLINE);
 	    bzero(sendBuff, MAXLINE);
 	    bzero(sendBuff2, MAXLINE);
+
+	    //char myForwardedHeader[MAXLINE];
+	    //bzero(myForwardedHeader, MAXLINE);
+	    //sprintf(myForwardedHeader, "Forwarded: for=%s;proto=http;by=%s", myBrowserIpaddr, threadInfo->proxyAddr);
+
+	    //int location = (int)strlen(threadInfo->recvline) - 1;
+	    //threadInfo->recvline[location] = '\0';
+	    //sprintf(threadInfo->recvline + strlen(threadInfo->recvline), "%s\r\n\n", myForwardedHeader);
+
+
 	    sprintf(sendBuff, "%s", threadInfo->recvline);
 	    sprintf(sendBuff2, "%s", threadInfo->recvline);
 
@@ -290,17 +296,7 @@ void *readWriteServer(void *threadInfoTemp){
 	    pch = strtok(threadInfo->recvline," ");
 	    strcpy(command,pch);
 
-	    if (strncmp(command, "GET", 3) == 0){
-		printf("Came into GET part\n");
-
-		//NEEDED http?: parse website and http type of 1.1 or 1.0
-		//pch = strtok(NULL, " ");
-		//strcpy(website,pch);
-		//pch = strtok(NULL, "\n");
-		//strcpy(http,pch);
-
-		//printf("website is: %s\n", website);
-		//printf("http type is: %s\n", http); 
+	    if (strncmp(command, "GET", 3) == 0 || strncmp(command, "HEAD", 4) == 0){
 
   
 		//get rid of http(s) and add in www and get rid of last '/' 
@@ -320,6 +316,7 @@ void *readWriteServer(void *threadInfoTemp){
 		memcpy(web, &webTemp[0], len);
 		sprintf(webForbidden, "www.%s", webTemp);
 
+		//Debugging Info
 		//printf("web created is: %s\n", web);
 		//printf("webtemp is: %s\n", webTemp);
 		//printf("webForbidden is: %s\n", webForbidden);
@@ -503,24 +500,8 @@ void *readWriteServer(void *threadInfoTemp){
 
 					    if( (recfd2 = recv(sockfd , recvBuff , MAXLINE , 0)) > 0)
 					    {
-						    
-						    //char copy[MAXLINE]; char status[MAXLINE];
-						    //sprintf(copy, "%s", recvBuff);
-						    //char *pch3; 
-						    //pch3 = strtok(copy, " ");
-						    //pch3 = strtok(NULL, " ");
-						    //strcpy(status, pch3);
-						    //int statusNum = atoi(status);
-
-						    //if (statusNum == 400) 			   
-
-						    //if (statusNum == 200){
-						    	    char myForwardedHeader[MAXLINE];
-							    bzero(myForwardedHeader, MAXLINE);
-							    sprintf(myForwardedHeader, "Forwarded: for=%s; proto=http; by=%s", myBrowserIpaddr, threadInfo->proxyAddr);
-							    printf("forwardedHeader: \n%s\n", myForwardedHeader);  
-							    printf("the value of recfd2 is: %d\n", recfd2);
-							    printf("Recieved data: \n%s\n\n", recvBuff);
+						   
+							    printf("recieved this from server: \n%s\n\n", recvBuff); 
 							    if(send(connfd , recvBuff , MAXLINE	 , 0) < 0)
 							    {
 								printf("Send failed when sending to browser\n");
@@ -536,7 +517,6 @@ void *readWriteServer(void *threadInfoTemp){
 								time(&rawtime);
 								timeinfo = localtime(&rawtime);
 								strftime(timeBuf, MAXLINE, "%xT%XZ", timeinfo);
-								printf("Current time is: %s\n", timeBuf);
 
 								//get statusNum, recfd2 
 								char copy[MAXLINE]; char status[MAXLINE];
@@ -550,7 +530,7 @@ void *readWriteServer(void *threadInfoTemp){
 							        int statusNum = atoi(status);
 
 
-								//get content length
+								//Attempt at getting the content length from the recieved buffer
 								/*
 								int myContentLength = 0;
 							  	char contentLength[MAXLINE]; char nameGoal[MAXLINE];
@@ -583,10 +563,7 @@ void *readWriteServer(void *threadInfoTemp){
 								fclose(logReader);
 								pthread_mutex_unlock(&lock);
 							    } 
-						    //}
 						    bzero(recvBuff, MAXLINE);
-						    //bzero(copy, MAXLINE);
-						    //bzero(status, MAXLINE); 
 					    }
 					    if (recfd2 < 0){
 						//Send an error back to server of too long wait
@@ -686,15 +663,8 @@ void *readWriteServer(void *threadInfoTemp){
       
       if (read_size == 0){
 	printf ("Done receiving data \n");
-	//Maybe this not needed?
       }
 
-      if (read_size < 0){
-	//SEND: Need to send message back to browser of: waited too long for browser message
-	//					                       to reach proxy instead of breaking
-	printf ("Thread has timed out on the socket recvFrom\n");
-      }
-  
       fclose(threadInfo->reader);
       close(connfd);
    }//close inside infinite while loop //can delete this while loop??
