@@ -9,12 +9,11 @@
 #include <arpa/inet.h>
 #include <string.h>
 
-#define MAXLINE 4096 
+#define MAXLINE 4096 //size of buffer
 
-int     sockfd, n;
-char    recvline[MAXLINE + 1], sendline[1024];
-struct sockaddr_in servaddr;
-int port;
+int     sockfd;//the socket file descriptor
+char    recvline[MAXLINE], sendline[MAXLINE]; //the recieve and send buffers
+struct sockaddr_in servaddr; //the server address
 
 /*
  * This method checks to make sure that the number of 
@@ -23,7 +22,7 @@ int port;
  */
 void numArgs(int argc){
     if (argc != 3){
-        perror("usage: a.out <IPaddress> <PORTnumber>\n");
+        printf("usage: client <server-ip> <server-listen-port>\n");
         exit(1);
     }
 }
@@ -38,7 +37,7 @@ void numArgs(int argc){
 int createSocket(){
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0){
-        perror("socket error\n");
+        printf("socket error\n");
         exit(1);
     }
     return sockfd;
@@ -51,6 +50,7 @@ int createSocket(){
  * client can communicate with the server.
  */
 void createServer(const char *ipaddr, const char *portnum){
+    int port;
     sscanf(portnum,"%d",&port);  //port number specified
     bzero(&servaddr, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
@@ -58,7 +58,7 @@ void createServer(const char *ipaddr, const char *portnum){
     
     //ip address specified below by the user  
     if (inet_pton(AF_INET, ipaddr, &servaddr.sin_addr) <= 0){
-        perror("inet_pton error");
+        printf("inet_pton error");
         exit(1);
     }
 }
@@ -69,7 +69,7 @@ void createServer(const char *ipaddr, const char *portnum){
  */ 
 void connectSocket(int sockfd){      
     if (connect(sockfd, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0){
-        perror("connect error\n");
+        printf("connect error\n");
         exit(1);
     }
 }
@@ -86,77 +86,29 @@ void connectSocket(int sockfd){
  * those two system calls, errors are thrown respectively.
  */
 void readWriteSocket(int sockfd){
-  int recfd; //the file descriptor for recieving messages
   
   //infinite while loop that exits either during an error
   //or when the client sends an "exit" message
   while(1){
-        bzero(sendline,1024); //zeroing out the buffer
-        printf(" > ");
-        fgets(sendline, 1024, stdin); //gets user input
-        
-        //sends the message to the server 
-        if( send(sockfd , sendline , strlen(sendline) , 0) < 0)
-        {
-            perror("Send failed\n");
-            exit(1);
-        } 
-
-        //while loop that ends only when the server is done
-        //sending its messages to the client            
-        while( (recfd = recv(sockfd , recvline , MAXLINE , 0)) > 0)
-        {
-            //printf("Got here1\n");
-	    int newLength = (int)(sizeof(recvline));
-	    printf("the length is: %d\n",newLength);
-            printf(recvline);
-            //printf("Got here2\n");
-
-	    printf("1111111111111111111111111111111111\n");
-
-	    int myLength = strlen(recvline);
-	    const char *last_five = &recvline[myLength-5];
-	    const char *last_four = &recvline[myLength-4];	    
-
-	    printf("222222222222222222222222222222222\n");
-
-            //if client enters exit, this allows the
-            //client to close its socket and exit
-            if (strncmp(last_four,"exit",4) == 0){
-              printf("got into socket close \n");
-              close(sockfd);
-              exit(0);
-            }
-
-	    printf("333333333333333333333333333333333\n");
-
-            //this message is for when the server is done
-            //sending its messages. It allows the client to 
-            //enter its next command.
-            if(strncmp(last_five,"empty",5) == 0){
-              break;
-            }
-
-	    printf("444444444444444444444444444444444\n");
-
-            //printf(recvline);
-            bzero(recvline,MAXLINE); //zero out buffer
-
-	    printf("555555555555555555555555555555555\n");
-
+        bzero(sendline,MAXLINE); //zeroing out the buffer
+        printf("ftp> ");
+        fgets(sendline, MAXLINE, stdin); //gets user input
+ 
+        if (strncmp(sendline, "ls", 2) == 0){
+            printf("in ls\n");
+            send(sockfd, sendline, MAXLINE, 0);
+            recv(sockfd, recvline, MAXLINE, 0); 
+            printf("recieved: %s\n", recvline); 
+        }else if (strncmp(sendline, "get", 3) == 0){
+            printf("in get\n"); 
+        }else if (strncmp(sendline, "put", 3) == 0){
+            printf("in put\n");
+        }else if (strncmp(sendline, "quit", 4) == 0){
+            printf("in quit\n");
+        }else{
+            continue;
         }
-       
-        //if there was a recieving error, it will accounted over here 
-        if (recfd < 0){
-           perror("recv failed on client\n");
-           exit(1); 
-        }
-        if (recfd == 0){
-          printf("recfd is equal to zero");
-        }
-
-        bzero(recvline,MAXLINE); //the recieving buffer is reset/zeroed
-  }
+  }       
 }
 
 /*
@@ -173,6 +125,3 @@ main(int argc, char **argv)
     readWriteSocket(sockfd);
     return 0;
 }
-
-
-
