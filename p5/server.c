@@ -8,7 +8,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <string.h>
-#include <ctype.h>
 
 #define MAXLINE2 4096 //size of bytes for the buffer
 #define LISTENQ 1024 //size of the listening queue of clients
@@ -16,6 +15,7 @@
 int     listenfd, connfd,read_size; //the listen and accept file desciptors
 struct sockaddr_in servaddr; //the server address
 char    sendBuff[MAXLINE2], recvBuff[MAXLINE2]; //the buffer which reads and sends lines
+pid_t pid;
 
 /*
  * This method checks the number of arguments when running
@@ -101,31 +101,6 @@ int acceptServer(int listenfd){
         return connfd;
 }
 
-//Count number of words in a buffer
-int countWords (const char* str)
-{
-  int count = 0;
-
-  while (*str != '\0')
-  {
-    while (*str != '\0' && isblank(*str)) // remove all spaces between words
-    {
-      str++;
-    }
-    if(*str != '\0')
-    {
-      count++;
-    }
-
-    while (*str != '\0' && !isblank(*str)) // loop past the found word
-    {
-      str++;
-    }
-  }
-
-  return count;
-}
-
 
 /*
  * This method is the main meat of this program. It has an
@@ -136,22 +111,31 @@ int countWords (const char* str)
  * gets sent to a buffer. This buffer is then sent to the client
  * who prints the output onto the screen.
  */
-void readWriteServer(int connfd, int listenfd){
+void readWriteServer(int listenfd){
     while(1){
-        int read_size;
-        int send_size;
-        bzero(recvBuff, MAXLINE2);
-        bzero(sendBuff, MAXLINE2);
-        if ( (read_size = recv(connfd, recvBuff, MAXLINE2, 0)) > 0){
-            printf("recieved content: \n%s", recvBuff); 
-        }
-       
-        int wordCount = countWords(recvBuff);
-        printf("word count is: %d\n", wordCount); 
-        sprintf(sendBuff, "server content");
+        
+        int connfd = acceptServer(listenfd);
 
-        if ( (send_size = send(connfd, sendBuff, MAXLINE2, 0)) > 0){
-            printf("sent content\n\n");
+        pid = fork();
+        if (pid == 0){
+            while(1){
+                printf("in child\n");
+                int read_size;
+                int send_size;
+                bzero(recvBuff, MAXLINE2);
+                bzero(sendBuff, MAXLINE2);
+                if ( (read_size = recv(connfd, recvBuff, MAXLINE2, 0)) > 0){
+                    printf("recieved content: %s\n", recvBuff); 
+                }
+               
+                sprintf(sendBuff, "server content");
+
+                if ( (send_size = send(connfd, sendBuff, MAXLINE2, 0)) > 0){
+                    printf("sent content\n");
+                }
+            }
+        }else{
+            printf("in parent\n");
         }
     }
 }
@@ -168,7 +152,6 @@ main(int argc, char **argv)
   createServer(argv[1]);
   bindServer(listenfd);
   listenServer(listenfd);
-  int connfd = acceptServer(listenfd);
-  readWriteServer(connfd, listenfd);
+  readWriteServer(listenfd);
   return 0;
 }
