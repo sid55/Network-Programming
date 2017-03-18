@@ -301,7 +301,7 @@ void readWriteSocket(int sockfd, char *ipNum){
             //MAYBE USE SELECT => can recieve data on sockfd or connfd
             char comparison[MAXLINE];
             bzero(comparison, MAXLINE);
-            sprintf(comparison, "550 File unavailable\n",fileName);
+            sprintf(comparison, "550 File unavailable\n");
             int once = 0;
             FILE *fileptr;
             while(recv(connfd, recvline, MAXLINE, 0) > 0){

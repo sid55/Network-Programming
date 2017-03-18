@@ -242,7 +242,7 @@ void readWriteServer(int listenfd, const char* portNum){
                         }
                     }
                     if (errorMsg == 1){
-                        sprintf(sendBuff, "ls: cannot access '%s': No such file or directory\n", rest);
+                        sprintf(sendBuff, "550 File/Directory unavailable\n");
                         send(sockfd, sendBuff, MAXLINE2, 0);
                     }
                     fclose(in);
@@ -277,7 +277,7 @@ void readWriteServer(int listenfd, const char* portNum){
                         }
                     }
                     if (errorMsg == 1){
-                        sprintf(sendBuff, "550 File unavailable\n", rest);
+                        sprintf(sendBuff, "550 File unavailable\n");
                         send(sockfd, sendBuff, MAXLINE2, 0);
                     }
                     fclose(in);
