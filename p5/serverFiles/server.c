@@ -224,7 +224,7 @@ void readWriteServer(int listenfd, const char* portNum){
            
 
                 }else if(strncmp("LIST", command, 4) == 0){
-                    printf("in port\n");
+                    printf("in list\n");
                     int errorMsg = 1;
                     int errorMsg2 = 1;
                     FILE *in;
@@ -259,19 +259,52 @@ void readWriteServer(int listenfd, const char* portNum){
                     bzero(recvBuff, MAXLINE2);
                     bzero(sendBuff, MAXLINE2);
                 }else if(strncmp("RETR", command, 4) == 0){
-                    printf("in port\n");
+                    printf("in retr\n");
+                    int errorMsg = 1;
+                    int errorMsg2 = 1;
+                    FILE *in;
+                    extern FILE *popen();
+                    char catCommand[MAXLINE2];
+                    bzero(catCommand, MAXLINE2);
+                    sprintf(catCommand, "cat %s", rest);
+                    if (!(in = popen(catCommand, "r"))) {
+                       errorMsg2 = 0; 
+                    }else{
+                        while((fgets(sendBuff, sizeof(sendBuff), in)) != NULL){
+                            errorMsg = 0;
+                            send(sockfd, sendBuff, MAXLINE2, 0); 
+                            bzero(sendBuff, MAXLINE2);
+                        }
+                    }
+                    if (errorMsg == 1){
+                        sprintf(sendBuff, "550 File unavailable\n", rest);
+                        send(sockfd, sendBuff, MAXLINE2, 0);
+                    }
+                    fclose(in);
+                    close(sockfd);
+                    bzero(sendBuff, MAXLINE2);
+                    if (errorMsg2 == 1){
+                        sprintf(sendBuff,"200 RETR OK");
+                        send(connfd, sendBuff, MAXLINE2, 0);
+                    }else{
+                        sprintf(sendBuff,"451 Local Error");
+                        send(connfd, sendBuff, MAXLINE2, 0);
+                    }
+
+                    bzero(recvBuff, MAXLINE2);
+                    bzero(sendBuff, MAXLINE2);
 
             
                 }else if(strncmp("STOR", command, 4) == 0){
-                    printf("in port\n");
+                    printf("in stor\n");
 
 
                 }else if(strncmp("QUIT", command, 4) == 0){
-                    printf("in port\n");
+                    printf("in quit\n");
 
 
                 }else if(strncmp("ABOR", command, 4) == 0){
-                    printf("in port\n");
+                    printf("in abor\n");
 
 
                 } 

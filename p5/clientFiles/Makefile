@@ -1,6 +1,6 @@
 #Makefile
 
-all: client server
+all: client
 
 client: client.c
 	gcc -Wall client.c -o client

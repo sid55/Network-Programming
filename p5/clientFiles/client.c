@@ -198,10 +198,64 @@ void readWriteSocket(int sockfd, char *ipNum){
         bzero(recvline, MAXLINE);
         bzero(sendline, MAXLINE);
 
-        printf("wordCount is: %d\n", wordCount); 
         //check each command user has entered and depending on which one,
         //do the appropriate logic 
         if ((strncmp(command, "ls", 2) == 0) && (wordCount == 2)){
+
+            sprintf(sendline, "PORT %s,%d,%d", ipNum, firstNum, secondNum);
+            if(send(sockfd, sendline, MAXLINE, 0) < 0){
+                printf("send error\n");
+                exit(1);
+            }
+            
+            int connfd = accept(listenfd, (struct sockaddr *) NULL, NULL);
+            if (connfd < 0){
+                printf("accept error\n");
+                exit(1);
+            } 
+ 
+            //recieving 200 OK for POST command 
+            bzero(recvline, MAXLINE); 
+            if(recv(sockfd, recvline, MAXLINE, 0) < 0){
+                printf("send error\n");
+                exit(1);
+            }
+ 
+            printf("%s\n", recvline);
+ 
+            //send list command with rest of list arguments
+            bzero(sendline, MAXLINE);
+            sprintf(sendline, "LIST ");
+            pch = strtok(NULL, "\n");
+            //getting rid of spaces but called filename for simplicity
+            char fileName[MAXLINE];
+            bzero(fileName, MAXLINE);
+            int fileIndex = 0;
+            for (int i = 0; i< (int)strlen(pch); i++){
+                if (pch[i] != ' '){
+                    fileName[fileIndex] = pch[i];
+                    fileIndex++;
+                }
+            }          
+            //finish sending
+            sprintf(sendline + strlen(sendline), "%s", fileName); 
+            send(sockfd, sendline, MAXLINE, 0);
+ 
+        
+            //MAYBE USE SELECT => can recieve data on sockfd or connfd
+            while(recv(connfd, recvline, MAXLINE, 0) > 0){
+                printf("%s", recvline);
+                bzero(recvline, MAXLINE);
+            }
+            bzero(recvline,MAXLINE);
+            if (recv(sockfd, recvline, MAXLINE, 0) > 0){
+                printf("%s\n", recvline);
+            } 
+
+            bzero(sendline, MAXLINE);
+            bzero(recvline, MAXLINE); 
+
+        }else if ((strncmp(command, "get", 3) == 0) && (wordCount == 2)){
 
             sprintf(sendline, "PORT %s,%d,%d", ipNum, firstNum, secondNum);
             if(send(sockfd, sendline, MAXLINE, 0) < 0){
@@ -227,17 +281,61 @@ void readWriteSocket(int sockfd, char *ipNum){
  
             //send list command with rest of list arguments
             bzero(sendline, MAXLINE);
-            sprintf(sendline, "LIST ");
+            sprintf(sendline, "RETR ");
             pch = strtok(NULL, "\n");
-            sprintf(sendline + strlen(sendline), "%s", pch); 
+            //create file name with filename provided by user
+            char fileName[MAXLINE];
+            bzero(fileName, MAXLINE);
+            int fileIndex = 0;
+            for (int i = 0; i< (int)strlen(pch); i++){
+                if (pch[i] != ' '){
+                    fileName[fileIndex] = pch[i];
+                    fileIndex++;
+                }
+            }          
+            //finish sending
+            sprintf(sendline + strlen(sendline), "%s", fileName); 
             send(sockfd, sendline, MAXLINE, 0);
- 
-        
+
+
             //MAYBE USE SELECT => can recieve data on sockfd or connfd
+            char comparison[MAXLINE];
+            bzero(comparison, MAXLINE);
+            sprintf(comparison, "550 File unavailable\n",fileName);
+            int once = 0;
+            FILE *fileptr;
             while(recv(connfd, recvline, MAXLINE, 0) > 0){
-                printf("%s", recvline);
-                bzero(recvline, MAXLINE);
+                if (strncmp(recvline,comparison,(int)strlen(recvline)) == 0){
+                    printf("%s", recvline); 
+                    bzero(recvline, MAXLINE); 
+                }else if(once == 0){
+                    if(access(fileName,F_OK)!=-1){
+                        remove(fileName);
+                    }
+
+                    fileptr = fopen(fileName,"a");
+                    if(fileptr == NULL){
+                        printf("file cannot be written to\n");
+                        exit(1); //the code should never come here
+                    }
+                    fputs(recvline, fileptr);
+                    fclose(fileptr);
+                    once = 1;
+                    bzero(recvline, MAXLINE);
+                }else{
+                    fileptr = fopen(fileName,"a");
+                    if(fileptr == NULL){
+                        printf("file cannot be written to\n");
+                        exit(1); //the code should never come here
+                    }
+                    fputs(recvline, fileptr);
+                    fclose(fileptr); 
+                    bzero(recvline, MAXLINE);
+                }
             }
+
+            
+
             bzero(recvline,MAXLINE);
             if (recv(sockfd, recvline, MAXLINE, 0) > 0){
                 printf("%s\n", recvline);
@@ -245,12 +343,6 @@ void readWriteSocket(int sockfd, char *ipNum){
 
             bzero(sendline, MAXLINE);
             bzero(recvline, MAXLINE); 
-        }else if ((strncmp(command, "get", 3) == 0) && (wordCount == 2)){
-
-            printf("in get\n");
-            send(sockfd, sendline, MAXLINE, 0);
-            recv(sockfd, recvline, MAXLINE, 0); 
-            printf("recieved: %s\n", recvline);  
 
         }else if ((strncmp(command, "put", 3) == 0) && (wordCount == 2)){
 
