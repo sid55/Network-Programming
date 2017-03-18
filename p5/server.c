@@ -111,29 +111,171 @@ int acceptServer(int listenfd){
  * gets sent to a buffer. This buffer is then sent to the client
  * who prints the output onto the screen.
  */
-void readWriteServer(int listenfd){
+void readWriteServer(int listenfd, const char* portNum){
     while(1){
         
-        int connfd = acceptServer(listenfd);
+        int connfd = acceptServer(listenfd); 
 
         pid = fork();
         if (pid == 0){
             while(1){
                 printf("in child\n");
-                int read_size;
-                int send_size;
+                
+                int sockfd; 
+                int read_size, send_size;
                 bzero(recvBuff, MAXLINE2);
                 bzero(sendBuff, MAXLINE2);
-                if ( (read_size = recv(connfd, recvBuff, MAXLINE2, 0)) > 0){
-                    printf("recieved content: %s\n", recvBuff); 
-                }
-               
-                sprintf(sendBuff, "server content");
 
-                if ( (send_size = send(connfd, sendBuff, MAXLINE2, 0)) > 0){
-                    printf("sent content\n");
-                }
-            }
+                read_size = recv(connfd, recvBuff, MAXLINE2, 0);
+ 
+                //get the command
+                char recvBuffTemp[MAXLINE2], command[MAXLINE2], rest[MAXLINE2];
+                bzero(recvBuffTemp, MAXLINE2);
+                bzero(command, MAXLINE2);
+                bzero(rest, MAXLINE2);
+                sprintf(recvBuffTemp, "%s", recvBuff);
+                char *pch; 
+                pch = strtok(recvBuffTemp, " ");
+                strcpy(command, pch);
+                pch = strtok(NULL, "\n");
+                strcpy(rest, pch);
+
+                if (strncmp("PORT", command, 4) == 0){ 
+                    printf("in port\n");
+
+                    char myIp[MAXLINE2], myPort[MAXLINE2], firstNumAr[MAXLINE2], secondNumAr[MAXLINE2];
+                    bzero(myIp, MAXLINE2);
+                    bzero(myPort, MAXLINE2);
+                    int commaCount = 0;
+                    int restlen = (int)strlen(rest);
+                    int location = -1;
+                    int firstNum, secondNum, realPort;
+
+                    //get ip address in correct format            
+                    for(int i = 0; i < restlen; i++){
+                        if (commaCount < 4){
+                            if(rest[i] == ','){
+                                myIp[i] = '.';
+                                commaCount++;
+                            }else{
+                                myIp[i] = rest[i];
+                            }
+                        }else{
+                            location = i;
+                            break;
+                        }
+                    }
+                    myIp[(int)strlen(myIp) - 1] = '\0';
+
+                    //get port number in correct format
+                    memcpy(myPort, &rest[location], (int)strlen(rest) - 1);
+                    char *pch2;
+                    pch2 = strtok(myPort, ",");
+                    strcpy(firstNumAr,pch2);
+                    pch2 = strtok(NULL, "\n");
+                    strcpy(secondNumAr, pch2);
+                    firstNum = atoi(firstNumAr);
+                    secondNum = atoi(secondNumAr);
+                    realPort = firstNum * 256 + secondNum;                    
+
+                    //set client socket, its address and connect
+                    //set up server data port
+                    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+                    if (sockfd < 0){
+                        printf("socket error\n");
+                        exit(1);
+                    }
+                    struct sockaddr_in servaddr2; //the server address 
+                    int port;
+                    sscanf(portNum,"%d",&port); //converts portnum to int
+                    while(1){
+                        port = port - 1; 
+
+                        bzero(&servaddr2, sizeof(servaddr2));
+                        servaddr2.sin_family = AF_INET;
+                        servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+                        servaddr2.sin_port = htons(port); //sets the port number here 
+
+                        if (bind(sockfd, (struct sockaddr *)&servaddr2, sizeof(servaddr2)) < 0) {
+                            continue; 
+                        }else{
+                            break;
+                        }
+                    }
+
+                    struct sockaddr_in clientaddr; //the server addresss
+                    bzero(&clientaddr, sizeof(clientaddr));
+                    clientaddr.sin_family = AF_INET;
+                    clientaddr.sin_port = htons(realPort); //port number being set
+                    //ip address specified below by the user  
+                    if (inet_pton(AF_INET, myIp, &clientaddr.sin_addr) <= 0){
+                        printf("inet_pton error");
+                        exit(1);
+                    }
+                    if (connect(sockfd, (struct sockaddr *) &clientaddr, sizeof(clientaddr)) < 0){
+                        printf("connect error\n");
+                        exit(1);
+                    } 
+                    printf("ipNum:%s myPort:%d\n", myIp, realPort);
+                    
+                    bzero(sendBuff, MAXLINE2);
+                    sprintf(sendBuff, "200 PORT OK");
+                    send(connfd, sendBuff, MAXLINE2, 0); 
+           
+
+                }else if(strncmp("LIST", command, 4) == 0){
+                    printf("in port\n");
+                    int errorMsg = 1;
+                    int errorMsg2 = 1;
+                    FILE *in;
+                    extern FILE *popen();
+                    char lsCommand[MAXLINE2];
+                    bzero(lsCommand, MAXLINE2);
+                    sprintf(lsCommand, "ls %s", rest);
+                    if (!(in = popen(lsCommand, "r"))) {
+                       errorMsg2 = 0; 
+                    }else{
+                        while((fgets(sendBuff, sizeof(sendBuff), in)) != NULL){
+                            errorMsg = 0;
+                            send(sockfd, sendBuff, MAXLINE2, 0); 
+                            bzero(sendBuff, MAXLINE2);
+                        }
+                    }
+                    if (errorMsg == 1){
+                        sprintf(sendBuff, "ls: cannot access '%s': No such file or directory\n", rest);
+                        send(sockfd, sendBuff, MAXLINE2, 0);
+                    }
+                    fclose(in);
+                    close(sockfd);
+                    bzero(sendBuff, MAXLINE2);
+                    if (errorMsg2 == 1){
+                        sprintf(sendBuff,"200 LIST OK");
+                        send(connfd, sendBuff, MAXLINE2, 0);
+                    }else{
+                        sprintf(sendBuff,"451 Local Error");
+                        send(connfd, sendBuff, MAXLINE2, 0);
+                    }
+
+                    bzero(recvBuff, MAXLINE2);
+                    bzero(sendBuff, MAXLINE2);
+                }else if(strncmp("RETR", command, 4) == 0){
+                    printf("in port\n");
+
+            
+                }else if(strncmp("STOR", command, 4) == 0){
+                    printf("in port\n");
+
+
+                }else if(strncmp("QUIT", command, 4) == 0){
+                    printf("in port\n");
+
+
+                }else if(strncmp("ABOR", command, 4) == 0){
+                    printf("in port\n");
+
+
+                } 
+            }// inf while loop in child
         }else{
             printf("in parent\n");
         }
@@ -152,6 +294,6 @@ main(int argc, char **argv)
   createServer(argv[1]);
   bindServer(listenfd);
   listenServer(listenfd);
-  readWriteServer(listenfd);
+  readWriteServer(listenfd, argv[1]);
   return 0;
 }

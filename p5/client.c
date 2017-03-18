@@ -79,31 +79,25 @@ void connectSocket(int sockfd){
     }
 }
 
-//Count number of words in a buffer
-int countWords (const char* str)
-{
-  int count = 0;
+//count number of words in buffer
+int countWords3 (char* str){
+    int OUT = 0;
+    int IN = 1;
+    int state = OUT;
+    int wc = 0;
 
-  while (*str != '\0')
-  {
-    while (*str != '\0' && isblank(*str)) // remove all spaces between words
-    {
-      str++;
+    while(*str){
+        if(*str == ' ' || *str == '\n' || *str == '\t'){
+            state = OUT;
+        }
+        else if (state == OUT){
+            state = IN;
+            ++wc;
+        }
+        ++str;
     }
-    if(*str != '\0')
-    {
-      count++;
-    }
-
-    while (*str != '\0' && !isblank(*str)) // loop past the found word
-    {
-      str++;
-    }
-  }
-
-  return count;
+    return wc;
 }
-
 
 /*
  * The main logic of this program is in this method. The client 
@@ -116,7 +110,7 @@ int countWords (const char* str)
  * will require multiple packets. If there are any problems using
  * those two system calls, errors are thrown respectively.
  */
-void readWriteSocket(int sockfd, const char *ipNum, const char *portNum){
+void readWriteSocket(int sockfd, char *ipNum){
 
     int listenfd = socket(AF_INET, SOCK_STREAM, 0);
     if (listenfd < 0){
@@ -166,7 +160,14 @@ void readWriteSocket(int sockfd, const char *ipNum, const char *portNum){
         firstNum += CHECK_BIT(tempNum,i);
     } 
 
-    printf("firstNum:%d secondNum:%d portServOnCli:%d \n", firstNum, secondNum, randPort);
+   
+    //convert addr to without dots  
+    int lenIp = (int)strlen(ipNum);
+    for (int i = 0; i < lenIp; i++){
+        if (ipNum[i] == '.'){
+            ipNum[i] = ',';
+        }
+    }
 
     //infinite while loop that exits when user types in quit
     while(1){
@@ -174,38 +175,92 @@ void readWriteSocket(int sockfd, const char *ipNum, const char *portNum){
         printf("ftp> ");
         fgets(sendline, MAXLINE, stdin); //gets user input
 
-        char sendlineTemp[MAXLINE], command[MAXLINE];
+        //get the command
+        char sendlineTemp[MAXLINE], command[MAXLINE], extraSend[MAXLINE];
         bzero(sendlineTemp, MAXLINE);
         bzero(command, MAXLINE);
+        bzero(extraSend, MAXLINE);
         sprintf(sendlineTemp, "%s", sendline);
-
-        //get the command
+        sprintf(extraSend, "%s", sendline);
         char *pch; 
         pch = strtok(sendlineTemp, " ");
         strcpy(command, pch);
 
         //get the number of words in command
-        int wordCount = countWords(sendline);
+        char sample[MAXLINE];
+        bzero(sample, MAXLINE);
+        sprintf(sample, "%s", sendline);
+        int wordCount = countWords3(sample);
 
-        
+        char dataRecv[MAXLINE]; char dataSend[MAXLINE];
+        bzero(dataRecv, MAXLINE);
+        bzero(dataSend, MAXLINE);
+        bzero(recvline, MAXLINE);
+        bzero(sendline, MAXLINE);
+
+        printf("wordCount is: %d\n", wordCount); 
         //check each command user has entered and depending on which one,
         //do the appropriate logic 
         if ((strncmp(command, "ls", 2) == 0) && (wordCount == 2)){
-            printf("in ls\n");
+
+            sprintf(sendline, "PORT %s,%d,%d", ipNum, firstNum, secondNum);
+            if(send(sockfd, sendline, MAXLINE, 0) < 0){
+                printf("send error\n");
+                exit(1);
+            }
+
+            
+            int connfd = accept(listenfd, (struct sockaddr *) NULL, NULL);
+            if (connfd < 0){
+                printf("accept error\n");
+                exit(1);
+            } 
+ 
+            //recieving 200 OK for POST command 
+            bzero(recvline, MAXLINE); 
+            if(recv(sockfd, recvline, MAXLINE, 0) < 0){
+                printf("send error\n");
+                exit(1);
+            }
+ 
+            printf("%s\n", recvline);
+ 
+            //send list command with rest of list arguments
+            bzero(sendline, MAXLINE);
+            sprintf(sendline, "LIST ");
+            pch = strtok(NULL, "\n");
+            sprintf(sendline + strlen(sendline), "%s", pch); 
             send(sockfd, sendline, MAXLINE, 0);
-            recv(sockfd, recvline, MAXLINE, 0); 
-            printf("recieved: %s\n", recvline); 
+ 
+        
+            //MAYBE USE SELECT => can recieve data on sockfd or connfd
+            while(recv(connfd, recvline, MAXLINE, 0) > 0){
+                printf("%s", recvline);
+                bzero(recvline, MAXLINE);
+            }
+            bzero(recvline,MAXLINE);
+            if (recv(sockfd, recvline, MAXLINE, 0) > 0){
+                printf("%s\n", recvline);
+            } 
+
+            bzero(sendline, MAXLINE);
+            bzero(recvline, MAXLINE); 
         }else if ((strncmp(command, "get", 3) == 0) && (wordCount == 2)){
+
             printf("in get\n");
             send(sockfd, sendline, MAXLINE, 0);
             recv(sockfd, recvline, MAXLINE, 0); 
             printf("recieved: %s\n", recvline);  
+
         }else if ((strncmp(command, "put", 3) == 0) && (wordCount == 2)){
+
             printf("in put\n");
             send(sockfd, sendline, MAXLINE, 0);
             recv(sockfd, recvline, MAXLINE, 0); 
             printf("recieved: %s\n", recvline); 
+
         }else if ((strncmp(command, "quit", 4) == 0) && (wordCount == 1)){
+
             printf("in quit\n");
             send(sockfd, sendline, MAXLINE, 0);
             recv(sockfd, recvline, MAXLINE, 0); 
@@ -217,6 +272,7 @@ void readWriteSocket(int sockfd, const char *ipNum, const char *portNum){
                 printf("501 Syntax Error\n");
             }
             continue;
+
         }
     }//close inifite loop       
 }//close method
@@ -232,6 +288,6 @@ main(int argc, char **argv)
     int sockfd = createSocket();
     createServer(argv[1],argv[2]);
     connectSocket(sockfd);
-    readWriteSocket(sockfd, argv[1], argv[2]);
+    readWriteSocket(sockfd, argv[1]);
     return 0;
 }
