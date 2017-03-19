@@ -315,8 +315,14 @@ void readWriteServer(int listenfd, const char* portNum){
 
                         FD_SET(sockfd, &rdset);
                         FD_SET(connfd, &rdset);
-
-                        maxfdp1 = connfd + 1;
+                    
+                        int temp;
+                        if(sockfd >= connfd){
+                            temp = sockfd;
+                        }else{
+                            temp = connfd;
+                        }
+                        maxfdp1 = temp + 1;
                         select(maxfdp1, &rdset, &wrset, NULL, NULL);
 
                         if(FD_ISSET(connfd, &rdset)){
@@ -330,7 +336,6 @@ void readWriteServer(int listenfd, const char* portNum){
                         if(FD_ISSET(sockfd, &rdset)){
                             while(recv(sockfd, recvBuff, MAXLINE2, 0) > 0){
                                 if(once == 0){
-                                    printf("1111111111\n");
                                     if(access(fileName,F_OK)!=-1){
                                         remove(fileName);
                                     }
@@ -345,7 +350,6 @@ void readWriteServer(int listenfd, const char* portNum){
                                     once = 1;
                                     bzero(recvBuff, MAXLINE2);
                                 }else{
-                                    printf("222222222\n");
                                     fileptr = fopen(fileName,"a");
                                     if(fileptr == NULL){
                                         printf("file cannot be written to\n");

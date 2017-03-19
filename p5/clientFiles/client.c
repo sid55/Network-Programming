@@ -315,7 +315,13 @@ void readWriteSocket(int sockfd, char *ipNum){
                 FD_SET(sockfd, &rdset);
                 FD_SET(connfd, &rdset);
 
-                maxfdp1 = connfd + 1;
+                int temp;
+                if(connfd >= sockfd){
+                    temp = connfd;
+                }else{
+                    temp = sockfd;
+                }
+                maxfdp1 = temp + 1;
                 select(maxfdp1, &rdset, &wrset, NULL, NULL);
 
                 if(FD_ISSET(sockfd, &rdset)){
