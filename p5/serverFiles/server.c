@@ -8,6 +8,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <string.h>
+#include <sys/select.h>
 
 #define MAXLINE2 4096 //size of bytes for the buffer
 #define LISTENQ 1024 //size of the listening queue of clients
@@ -278,7 +279,7 @@ void readWriteServer(int listenfd, const char* portNum){
                     }
                     if (errorMsg == 1){
                         sprintf(sendBuff, "550 File unavailable\n");
-                        send(sockfd, sendBuff, MAXLINE2, 0);
+                        send(connfd, sendBuff, MAXLINE2, 0);
                     }
                     fclose(in);
                     close(sockfd);
@@ -297,8 +298,71 @@ void readWriteServer(int listenfd, const char* portNum){
             
                 }else if(strncmp("STOR", command, 4) == 0){
                     printf("in stor\n");
+                    
+                    char comparison[MAXLINE2]; char fileName[MAXLINE2];
+                    bzero(fileName, MAXLINE2);
+                    bzero(comparison, MAXLINE2);
+                    sprintf(fileName, "%s", rest);
+                    sprintf(comparison, "550 File unavailable\n");
+                    int once = 0;
+                    FILE *fileptr;
+                      
+                    fd_set rdset, wrset;
+                    int maxfdp1;
+                    FD_ZERO(&rdset);
+                    FD_ZERO(&wrset);
+                    while(1){
 
+                        FD_SET(sockfd, &rdset);
+                        FD_SET(connfd, &rdset);
 
+                        maxfdp1 = connfd + 1;
+                        select(maxfdp1, &rdset, &wrset, NULL, NULL);
+
+                        if(FD_ISSET(connfd, &rdset)){
+                            if(recv(connfd, recvBuff, MAXLINE2, 0) > 0){
+                                printf("%s", recvBuff); 
+                                bzero(recvBuff, MAXLINE2);
+                                break; 
+                            }
+                        }
+
+                        if(FD_ISSET(sockfd, &rdset)){
+                            while(recv(sockfd, recvBuff, MAXLINE2, 0) > 0){
+                                if(once == 0){
+                                    printf("1111111111\n");
+                                    if(access(fileName,F_OK)!=-1){
+                                        remove(fileName);
+                                    }
+
+                                    fileptr = fopen(fileName,"a");
+                                    if(fileptr == NULL){
+                                        printf("file cannot be written to\n");
+                                        exit(1); //the code should never come here
+                                    }
+                                    fputs(recvBuff, fileptr);
+                                    fclose(fileptr);
+                                    once = 1;
+                                    bzero(recvBuff, MAXLINE2);
+                                }else{
+                                    printf("222222222\n");
+                                    fileptr = fopen(fileName,"a");
+                                    if(fileptr == NULL){
+                                        printf("file cannot be written to\n");
+                                        exit(1); //the code should never come here
+                                    }
+                                    fputs(recvBuff, fileptr);
+                                    fclose(fileptr); 
+                                    bzero(recvBuff, MAXLINE2);
+                                }
+                            }
+                            break;
+                        }
+                    }
+  
+                    close(sockfd); 
+                    bzero(recvBuff, MAXLINE2);
+                    bzero(sendBuff, MAXLINE2);
                 }else if(strncmp("QUIT", command, 4) == 0){
                     printf("in quit\n");
 
