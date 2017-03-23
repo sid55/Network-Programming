@@ -15,7 +15,6 @@
 #include <signal.h>
 
 #define MAXLINE 4096 //size of buffer
-#define CHECK_BIT(var,pos) ((var) & (1<<(pos)))
 #define LISTENQ 1024
 
 int     sockfd;//the socket file descriptor
@@ -146,23 +145,9 @@ void readWriteSocket(int sockfd){
         printf("listen error\n");
         exit(1);
     } 
- 
-    //convert char array to int and get to sep
-    //port numbers. Take random prt generated above
-    int firstNum;
-    int secondNum;
-    int tempNum;
-    for (int i = 0; i < 8; i++){
-        secondNum += CHECK_BIT(randPort,i);
-    }
-    tempNum = randPort;
-    for (int i = 0; i < 8; i++){
-        tempNum = tempNum >> 1;
-    }
-    for (int i = 0; i < 8; i++){
-        firstNum += CHECK_BIT(tempNum,i);
-    } 
 
+    int firstNum = randPort/256;
+    int secondNum = randPort%256;
 
     //create ipNum  
     char ipNum[MAXLINE];
