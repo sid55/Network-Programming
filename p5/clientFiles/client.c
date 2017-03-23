@@ -81,6 +81,25 @@ void connectSocket(int sockfd){
     }
 }
 
+char *trim(char *str){
+    char *end;
+
+    // Trim leading space
+    while(isspace((unsigned char)*str)) str++;
+ 
+    if(*str == 0)  // All spaces?
+	return str;
+ 
+    // Trim trailing space
+    end = str + strlen(str) - 1;
+    while(end > str && isspace((unsigned char)*end)) end--;
+
+    // Write new null terminator
+    *(end+1) = 0;
+
+    return str;
+}
+
 //count number of words in buffer
 int countWords3 (char* str){
     int OUT = 0;
@@ -216,8 +235,10 @@ void readWriteSocket(int sockfd){
                 printf("send error\n");
                 exit(1);
             }
- 
-            printf("%s\n", recvline);
+
+	    if(strncmp(recvline, "200 PORT OK", 8) != 0){ 
+            	printf("%s\n", recvline);
+	    }
  
             //send list command with rest of list arguments
             bzero(sendline, MAXLINE);
@@ -277,7 +298,7 @@ void readWriteSocket(int sockfd){
 
             bzero(recvline,MAXLINE);
             if (recv(sockfd, recvline, MAXLINE, 0) > 0){
-                printf("%s\n", recvline);
+
             } 
 
             bzero(sendline, MAXLINE);
@@ -304,8 +325,10 @@ void readWriteSocket(int sockfd){
                 printf("send error\n");
                 exit(1);
             }
- 
-            printf("%s\n", recvline);
+		
+	    if(strncmp(recvline, "200 PORT OK", 8) != 0){ 
+            	printf("%s\n", recvline);
+	    }
  
             //send list command with rest of list arguments
             bzero(sendline, MAXLINE);
@@ -392,7 +415,7 @@ void readWriteSocket(int sockfd){
 
             bzero(recvline,MAXLINE);
             if (recv(sockfd, recvline, MAXLINE, 0) > 0){
-                printf("%s\n", recvline);
+
             } 
             close(connfd);
             bzero(sendline, MAXLINE);
@@ -419,8 +442,10 @@ void readWriteSocket(int sockfd){
                 printf("send error\n");
                 exit(1);
             }
- 
-            printf("%s\n", recvline);
+
+	    if(strncmp(recvline, "200 PORT OK", 8) != 0){ 
+            	printf("%s\n", recvline);
+	    }
  
             //send list command with rest of list arguments
             bzero(sendline, MAXLINE);
@@ -471,7 +496,7 @@ void readWriteSocket(int sockfd){
                 }
                 bzero(sendline, MAXLINE);
                 if (errorMsg2 == 1){
-                    printf("200 STOR OK\n");
+
                 }else{
                     printf("451 Local Error\n");
                 }
@@ -483,69 +508,13 @@ void readWriteSocket(int sockfd){
             close(connfd);
             bzero(recvline, MAXLINE);
             bzero(sendline, MAXLINE); 
-        }else if ((strncmp(command, "quit", 4) == 0) && (wordCount == 1)){
-
-            sprintf(sendline, "PORT %s,%d,%d", ipNum, firstNum, secondNum);
-            if(send(sockfd, sendline, MAXLINE, 0) < 0){
-                printf("send error\n");
-                exit(1);
-            }
-
-            
-            int connfd = accept(listenfd, (struct sockaddr *) NULL, NULL);
-            if (connfd < 0){
-                printf("accept error\n");
-                exit(1);
-            } 
+        }else if ((strncmp(command, "quit", 4) == 0) && (wordCount == 1)){ 
  
-            //recieving 200 OK for POST command 
-            bzero(recvline, MAXLINE); 
-            if(recv(sockfd, recvline, MAXLINE, 0) < 0){
-                printf("send error\n");
-                exit(1);
-            }
- 
-            printf("%s\n", recvline);
-
-              
-            //send list command with rest of list arguments
-            bzero(sendline, MAXLINE);
-            sprintf(sendline, "QUIT");
-            pch = strtok(NULL, "\n");
-            //create file name with filename provided by user
-            char fileName[MAXLINE];
-            bzero(fileName, MAXLINE);
-            sprintf(fileName, "%s", "myFile");
-            //finish sending
-            sprintf(sendline + strlen(sendline), "%s", fileName); 
-            send(sockfd, sendline, MAXLINE, 0);
-            
-
-            /* 
-            int x = 0;
-            while(x < 5000){
-                x++;
-            } 
-            //send list command with rest of list arguments
+            //send quit to server
             bzero(sendline, MAXLINE);
             sprintf(sendline , "%s", "QUIT");
-            send(sockfd, sendline, MAXLINE, 0);
-            */
-
-            printf("sent quit\n"); 
-            bzero(recvline,MAXLINE);
-            while (recv(sockfd, recvline, MAXLINE, 0) > 0){
-                printf("hello\n");
-                printf("%s\n", recvline);
-                break;
-            }
-
-            printf("00000000\n");
-            close(connfd); 
+            write(sockfd, sendline, strlen(sendline));
             close(sockfd);
-
-            printf("111111111\n");
-
             bzero(recvline, MAXLINE);
             bzero(sendline, MAXLINE);
             break;

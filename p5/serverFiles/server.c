@@ -120,15 +120,11 @@ void readWriteServer(int listenfd, const char* portNum){
         pid = fork();
         if (pid == 0){
             while(1){
-                printf("in child\n");
-                
                 int sockfd; 
                 bzero(recvBuff, MAXLINE2);
                 bzero(sendBuff, MAXLINE2);
 
-                recv(connfd, recvBuff, MAXLINE2, 0);
-
-                printf("recved: %s", recvBuff);
+                read(connfd, recvBuff, MAXLINE2);
  
                 //get the command
                 char recvBuffTemp[MAXLINE2], command[MAXLINE2], rest[MAXLINE2];
@@ -143,7 +139,6 @@ void readWriteServer(int listenfd, const char* portNum){
                 strcpy(rest, pch);
 
                 if (strncmp("PORT", command, 4) == 0){ 
-                    printf("in port\n");
 
                     char myIp[MAXLINE2], myPort[MAXLINE2], firstNumAr[MAXLINE2], secondNumAr[MAXLINE2];
                     bzero(myIp, MAXLINE2);
@@ -226,7 +221,7 @@ void readWriteServer(int listenfd, const char* portNum){
            
 
                 }else if(strncmp("LIST", command, 4) == 0){
-                    printf("in list\n");
+
                     int errorMsg = 1;
                     int errorMsg2 = 1;
                     FILE *in;
@@ -261,7 +256,7 @@ void readWriteServer(int listenfd, const char* portNum){
                     bzero(recvBuff, MAXLINE2);
                     bzero(sendBuff, MAXLINE2);
                 }else if(strncmp("RETR", command, 4) == 0){
-                    printf("in retr\n");
+
                     int errorMsg = 1;
                     int errorMsg2 = 1;
                     FILE *in;
@@ -298,7 +293,6 @@ void readWriteServer(int listenfd, const char* portNum){
 
             
                 }else if(strncmp("STOR", command, 4) == 0){
-                    printf("in stor\n");
                     
                     char comparison[MAXLINE2]; char fileName[MAXLINE2];
                     bzero(fileName, MAXLINE2);
@@ -369,14 +363,12 @@ void readWriteServer(int listenfd, const char* portNum){
                     bzero(recvBuff, MAXLINE2);
                     bzero(sendBuff, MAXLINE2);
                 }else if(strncmp("QUIT", command, 4) == 0){
-                    printf("in quit\n");
                     bzero(sendBuff, MAXLINE2);
                     sprintf(sendBuff, "200 QUIT OK");
                     send(connfd, sendBuff, MAXLINE2, 0);
                     bzero(recvBuff, MAXLINE2);
                     bzero(sendBuff, MAXLINE2);
                     close(connfd);
-                    close(sockfd);
                     break;
                 }else if(strncmp("ABOR", command, 4) == 0){
                     printf("in abor\n");
@@ -385,7 +377,7 @@ void readWriteServer(int listenfd, const char* portNum){
                 }
             }// inf while loop in child
         }else{
-            printf("in parent\n");
+
         }
     }
 }
