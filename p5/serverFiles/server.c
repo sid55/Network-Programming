@@ -13,7 +13,7 @@
 #define MAXLINE2 4096 //size of bytes for the buffer
 #define LISTENQ 1024 //size of the listening queue of clients
 
-int     listenfd, connfd,read_size; //the listen and accept file desciptors
+int     listenfd, connfd; //the listen and accept file desciptors
 struct sockaddr_in servaddr; //the server address
 char    sendBuff[MAXLINE2], recvBuff[MAXLINE2]; //the buffer which reads and sends lines
 pid_t pid;
@@ -123,11 +123,12 @@ void readWriteServer(int listenfd, const char* portNum){
                 printf("in child\n");
                 
                 int sockfd; 
-                int read_size, send_size;
                 bzero(recvBuff, MAXLINE2);
                 bzero(sendBuff, MAXLINE2);
 
-                read_size = recv(connfd, recvBuff, MAXLINE2, 0);
+                recv(connfd, recvBuff, MAXLINE2, 0);
+
+                printf("recved: %s", recvBuff);
  
                 //get the command
                 char recvBuffTemp[MAXLINE2], command[MAXLINE2], rest[MAXLINE2];
@@ -194,7 +195,7 @@ void readWriteServer(int listenfd, const char* portNum){
 
                         bzero(&servaddr2, sizeof(servaddr2));
                         servaddr2.sin_family = AF_INET;
-                        servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+                        servaddr2.sin_addr.s_addr = htonl(INADDR_ANY);
                         servaddr2.sin_port = htons(port); //sets the port number here 
 
                         if (bind(sockfd, (struct sockaddr *)&servaddr2, sizeof(servaddr2)) < 0) {
@@ -244,7 +245,7 @@ void readWriteServer(int listenfd, const char* portNum){
                     }
                     if (errorMsg == 1){
                         sprintf(sendBuff, "550 File/Directory unavailable\n");
-                        send(sockfd, sendBuff, MAXLINE2, 0);
+                        send(connfd, sendBuff, MAXLINE2, 0);
                     }
                     fclose(in);
                     close(sockfd);
@@ -369,13 +370,19 @@ void readWriteServer(int listenfd, const char* portNum){
                     bzero(sendBuff, MAXLINE2);
                 }else if(strncmp("QUIT", command, 4) == 0){
                     printf("in quit\n");
-
-
+                    bzero(sendBuff, MAXLINE2);
+                    sprintf(sendBuff, "200 QUIT OK");
+                    send(connfd, sendBuff, MAXLINE2, 0);
+                    bzero(recvBuff, MAXLINE2);
+                    bzero(sendBuff, MAXLINE2);
+                    close(connfd);
+                    close(sockfd);
+                    break;
                 }else if(strncmp("ABOR", command, 4) == 0){
                     printf("in abor\n");
 
 
-                } 
+                }
             }// inf while loop in child
         }else{
             printf("in parent\n");

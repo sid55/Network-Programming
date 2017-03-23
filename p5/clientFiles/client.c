@@ -12,6 +12,7 @@
 #include <time.h>
 #include <sys/types.h>
 #include <sys/select.h>
+#include <signal.h>
 
 #define MAXLINE 4096 //size of buffer
 #define CHECK_BIT(var,pos) ((var) & (1<<(pos)))
@@ -112,7 +113,7 @@ int countWords3 (char* str){
  * will require multiple packets. If there are any problems using
  * those two system calls, errors are thrown respectively.
  */
-void readWriteSocket(int sockfd, char *ipNum){
+void readWriteSocket(int sockfd){
 
     int listenfd = socket(AF_INET, SOCK_STREAM, 0);
     if (listenfd < 0){
@@ -162,7 +163,14 @@ void readWriteSocket(int sockfd, char *ipNum){
         firstNum += CHECK_BIT(tempNum,i);
     } 
 
-   
+
+    //create ipNum  
+    char ipNum[MAXLINE];
+    bzero(ipNum, MAXLINE);
+    uint32_t figureLen = sizeof(servaddr);
+    getsockname(sockfd, (struct sockaddr *)&servaddr, &figureLen);
+    sprintf(ipNum, "%s", inet_ntoa(servaddr.sin_addr));
+
     //convert addr to without dots  
     int lenIp = (int)strlen(ipNum);
     for (int i = 0; i < lenIp; i++){
@@ -170,6 +178,7 @@ void readWriteSocket(int sockfd, char *ipNum){
             ipNum[i] = ',';
         }
     }
+
 
     //infinite while loop that exits when user types in quit
     while(1){
@@ -244,11 +253,43 @@ void readWriteSocket(int sockfd, char *ipNum){
             send(sockfd, sendline, MAXLINE, 0);
  
         
-            //MAYBE USE SELECT => can recieve data on sockfd or connfd
-            while(recv(connfd, recvline, MAXLINE, 0) > 0){
-                printf("%s", recvline);
-                bzero(recvline, MAXLINE);
+            //Using select below 
+            fd_set rdset, wrset;
+            int maxfdp1;
+            FD_ZERO(&rdset);
+            FD_ZERO(&wrset);
+            while(1){
+
+                FD_SET(sockfd, &rdset);
+                FD_SET(connfd, &rdset);
+
+                int temp;
+                if(connfd >= sockfd){
+                    temp = connfd;
+                }else{
+                    temp = sockfd;
+                }
+                maxfdp1 = temp + 1;
+                select(maxfdp1, &rdset, &wrset, NULL, NULL);
+
+                if(FD_ISSET(sockfd, &rdset)){
+                    if(recv(sockfd, recvline, MAXLINE, 0) > 0){
+                        printf("%s", recvline); 
+                        bzero(recvline, MAXLINE);
+                        break; 
+                    }
+                }
+
+                if(FD_ISSET(connfd, &rdset)){
+                    while(recv(connfd, recvline, MAXLINE, 0) > 0){
+                        printf("%s", recvline);
+                        bzero(recvline, MAXLINE);
+                    }
+                    break; 
+                }
             }
+
+
             bzero(recvline,MAXLINE);
             if (recv(sockfd, recvline, MAXLINE, 0) > 0){
                 printf("%s\n", recvline);
@@ -368,13 +409,12 @@ void readWriteSocket(int sockfd, char *ipNum){
             if (recv(sockfd, recvline, MAXLINE, 0) > 0){
                 printf("%s\n", recvline);
             } 
-
+            close(connfd);
             bzero(sendline, MAXLINE);
             bzero(recvline, MAXLINE); 
 
         }else if ((strncmp(command, "put", 3) == 0) && (wordCount == 2)){
 
-            printf("in put\n");
             sprintf(sendline, "PORT %s,%d,%d", ipNum, firstNum, secondNum);
             if(send(sockfd, sendline, MAXLINE, 0) < 0){
                 printf("send error\n");
@@ -417,7 +457,7 @@ void readWriteSocket(int sockfd, char *ipNum){
 
             bzero(sendline, MAXLINE);
             FILE *fileptr;
-            fileptr = fopen(fileName,"a");
+            fileptr = fopen(fileName,"r");
             if(fileptr == NULL){
                 printf("550 File unavailable\n");
                 sprintf(sendline, "550 File unavailable\n");
@@ -444,18 +484,86 @@ void readWriteSocket(int sockfd, char *ipNum){
                     sprintf(sendline, "550 File unavailable\n");
                     send(sockfd, sendline, MAXLINE, 0);
                 }
+                bzero(sendline, MAXLINE);
+                if (errorMsg2 == 1){
+                    printf("200 STOR OK\n");
+                }else{
+                    printf("451 Local Error\n");
+                }
                 fclose(in);
                 fclose(fileptr);
             }
 
+            
+            close(connfd);
             bzero(recvline, MAXLINE);
             bzero(sendline, MAXLINE); 
         }else if ((strncmp(command, "quit", 4) == 0) && (wordCount == 1)){
 
-            printf("in quit\n");
+            sprintf(sendline, "PORT %s,%d,%d", ipNum, firstNum, secondNum);
+            if(send(sockfd, sendline, MAXLINE, 0) < 0){
+                printf("send error\n");
+                exit(1);
+            }
+
+            
+            int connfd = accept(listenfd, (struct sockaddr *) NULL, NULL);
+            if (connfd < 0){
+                printf("accept error\n");
+                exit(1);
+            } 
+ 
+            //recieving 200 OK for POST command 
+            bzero(recvline, MAXLINE); 
+            if(recv(sockfd, recvline, MAXLINE, 0) < 0){
+                printf("send error\n");
+                exit(1);
+            }
+ 
+            printf("%s\n", recvline);
+
+              
+            //send list command with rest of list arguments
+            bzero(sendline, MAXLINE);
+            sprintf(sendline, "QUIT");
+            pch = strtok(NULL, "\n");
+            //create file name with filename provided by user
+            char fileName[MAXLINE];
+            bzero(fileName, MAXLINE);
+            sprintf(fileName, "%s", "myFile");
+            //finish sending
+            sprintf(sendline + strlen(sendline), "%s", fileName); 
             send(sockfd, sendline, MAXLINE, 0);
-            recv(sockfd, recvline, MAXLINE, 0); 
-            printf("recieved: %s\n", recvline); 
+            
+
+            /* 
+            int x = 0;
+            while(x < 5000){
+                x++;
+            } 
+            //send list command with rest of list arguments
+            bzero(sendline, MAXLINE);
+            sprintf(sendline , "%s", "QUIT");
+            send(sockfd, sendline, MAXLINE, 0);
+            */
+
+            printf("sent quit\n"); 
+            bzero(recvline,MAXLINE);
+            while (recv(sockfd, recvline, MAXLINE, 0) > 0){
+                printf("hello\n");
+                printf("%s\n", recvline);
+                break;
+            }
+
+            printf("00000000\n");
+            close(connfd); 
+            close(sockfd);
+
+            printf("111111111\n");
+
+            bzero(recvline, MAXLINE);
+            bzero(sendline, MAXLINE);
+            break;
         }else{
             if ((strncmp(command, "quit", 4) != 0) && (strncmp(command, "put", 3) != 0) && (strncmp(command, "get", 3) != 0) && (strncmp(command, "ls", 2) != 0)){  
                 printf("500 Syntax Error\n"); 
@@ -479,6 +587,6 @@ main(int argc, char **argv)
     int sockfd = createSocket();
     createServer(argv[1],argv[2]);
     connectSocket(sockfd);
-    readWriteSocket(sockfd, argv[1]);
+    readWriteSocket(sockfd);
     return 0;
 }

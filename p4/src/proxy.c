@@ -162,7 +162,7 @@ void listenServer(int listenfd){
     bzero(z, MAXLINE);
     uint32_t tempLen = sizeof(servaddr);
     int myProxyNum = getsockname(listenfd, (struct sockaddr *)&servaddr, &tempLen);
-    sprintf(z,inet_ntoa(servaddr.sin_addr));
+    sprintf(z, "%s", inet_ntoa(servaddr.sin_addr));
 
     //have each thread struct hold the proxy address
     int i = 0;
