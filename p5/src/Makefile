@@ -1,15 +1,14 @@
 #Makefile
 
-all: server
+all: client server
 
 client: client.c
 	gcc -Wall client.c -o client
-
-example: example.c
-	gcc -Wall example.c -o example
+	mv client ../bin
 
 server: server.c
 	gcc -Wall server.c -o server
+	mv server ../bin
 
 clean: 
-	rm -f client server
+	rm -f ../client ../server

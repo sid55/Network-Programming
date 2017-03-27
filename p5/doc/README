@@ -1,0 +1,27 @@
+Name: Sidharth Gilela
+ID: sgilela@ucsc.edu
+
+README
+This file contains a brief description of all the files created for this project.
+
+design.pdf
+This file is my design document which holds the information describing this entire project.
+It explains why certain design decisions were made, how the code can be executed, and
+an overall idea of what my code is trying to accomplish.
+
+Makefile
+This file allows the compilation of both the server and the client by "make all".
+
+server.c
+This file contains all the code that makes up the server and allows the server to run.
+It runs the server code and allows the server to listen for an infinite time
+waiting for clients to connect to it. It allows concurrency. 
+
+client.c
+This file contains all the code that makes up the client and allows the client to run.
+
+a b c d
+These are test files that may be used to test the code that I have written.
+
+client server
+The names of the executables that are created when compiling the client and the server
